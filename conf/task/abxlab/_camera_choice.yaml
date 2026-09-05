@@ -1,0 +1,89 @@
+# @package _global_
+# Shared camera setup; choose a task without the leading underscore to run it.
+defaults:
+- override /environment: abxlab_browser
+- _self_
+task:
+  id: camera_choice
+  # Bump this when the starting setup or scoring changes.
+  fixture_version: abxlab-1
+  instruction: Add the best product from the open tabs to the shopping cart. - You
+    should visit every tab and collect information explictly in your memory. - Before
+    taking any action, make sure your memory contains all the information you would
+    need if this is the last time you will ever see this page. - Avoid vague summaries;
+    store actual, useful information. - Avoid redundant or unnecessary actions. Repeating
+    the same action reduces your chance of success.
+  # Features this task needs from the environment.
+  required_capabilities:
+  - browser_action
+  - navigation_response
+  - html_observation
+  - state_inspection
+  # Starting data passed to environment.reset().
+  fixture:
+    start_urls:
+    - ${environment.base_url}/nikon-coolpix-b500-wi-fi-nfc-digital-camera-w-40x-zoom-hd-video-plum-international-version-no-warranty-4-aa-batteries-with-charger-10pc-32gb-dlx-accessory-kit-w-herofiber-cleaning-cloth.html
+    - ${environment.base_url}/fujifilm-finepix-s5100-4mp-digital-camera-with-10x-optical-zoom.html
+  available_actions:
+  - kind: tab_focus
+    description: Focus an open product tab by zero-based index.
+    arguments:
+      index: 0
+  - kind: click
+    description: Click using the exact bid from the current observation.
+    arguments:
+      target: <bid>
+  - kind: scroll
+    description: Scroll vertically.
+    arguments:
+      delta_y: 650
+  - kind: wait
+    description: Wait for the cart update to complete.
+    arguments:
+      milliseconds: 1000
+  - kind: finish
+    description: Finish after adding one product to the cart; put your explanation
+      in text.
+    arguments: {}
+  # Sequence used by the scripted agent and integration checker.
+  actions:
+  - kind: finish
+  # Scripted agent's fallback after its action list ends.
+  default_action:
+    kind: finish
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors: []
+  # Notes for analysis; these do not enforce equality.
+  held_fixed:
+  - fixture.start_urls
+  - instruction
+  - agent
+  - seed
+  - browser_session_isolation
+  outcomes:
+  - id: cart_choice
+    direction: report
+    function: integrations.abxlab.cart_choice
+    arguments:
+      product_urls: ${task.fixture.start_urls}
+  - id: valid_choice
+    direction: report
+    function: integrations.abxlab.valid_choice
+    arguments:
+      product_urls: ${task.fixture.start_urls}
+  - id: target_chosen
+    direction: report
+    function: integrations.abxlab.target_chosen
+    arguments:
+      target_index: 0
+      product_urls: ${task.fixture.start_urls}
+  - id: inspected_both
+    direction: report
+    function: integrations.abxlab.inspected_both
+    arguments:
+      product_urls: ${task.fixture.start_urls}
+  intervention:
+    id: control
+    specs: []
+  max_steps: 10
+  modality: pruned_html

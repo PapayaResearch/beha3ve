@@ -1,0 +1,16 @@
+id: computer_use
+adapter:
+  _target_: harness.environments.computer_use.ComputerUseEnvironment
+  backend:
+    _target_: harness.environments.computer_use.MemoryComputerUseBackend
+    viewport:
+      width: 1280
+      height: 720
+# Features this environment adapter provides.
+capabilities:
+  - visual_observation
+  - pointer_action
+  - keyboard_action
+  - computer_action
+  - state_inspection
+  - snapshot_restore

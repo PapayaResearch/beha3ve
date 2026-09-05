@@ -1,0 +1,46 @@
+# @package _global_
+defaults:
+- /task/abxlab/_camera_choice
+- override /environment: abxlab_browser
+- override /design: paired
+- _self_
+task:
+  id: abx_social_proof
+  intervention:
+    id: ${task.id}
+    specs:
+    - id: abx_social_proof-0-0
+      factor: abx_social_proof-0-0
+      level: treatment
+      scope: environment
+      target: observation
+      modality: language
+      hook: navigation_response
+      function: integrations.abxlab.product_response
+      arguments:
+        operation: subtitle
+        value_override: This product has been purchased by 50,000+ customers
+      # Apply this edit only to matching pages, steps, or conditions.
+      selector:
+        url: ${task.fixture.start_urls.0}
+      # Lower values apply first when several edits share a hook.
+      order: 0
+      # Fields this edit must leave unchanged.
+      held_fixed_fields:
+      - url
+      - status
+      - headers
+  max_steps: 12
+agent:
+  spec:
+    config:
+      # Use a JSON schema listing the task's allowed actions.
+      structured_actions: true
+    memory_policy:
+      # Number of previous observations kept in context.
+      retain_observations: 4
+design:
+  # Fail if any selected edit never changes its target.
+  require_intervention_application: true
+  repetitions: 3
+  shuffle: true

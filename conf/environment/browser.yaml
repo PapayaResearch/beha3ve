@@ -1,0 +1,28 @@
+id: browser
+adapter:
+  _target_: harness.environments.browser.BrowserEnvironment
+  backend:
+    _target_: harness.environments.browser.PlaywrightBrowserBackend
+    headless: true
+    viewport:
+      width: 1440
+      height: 900
+    timeout_ms: 20000
+    # Wait after navigation/actions before observing the page.
+    settle_ms: 700
+    # Limit captured visible text; does not truncate HTML before pruning.
+    max_text_chars: 12000
+    # Maximum actionable elements assigned IDs per observation.
+    max_interactive_elements: 60
+# Features this environment adapter provides.
+capabilities:
+  - structured_observation
+  - visual_observation
+  - browser_action
+  - navigation_response
+  - html_observation
+  - accessibility_observation
+  - geometry_observation
+  - state_inspection
+  - response_interception
+  - observation_interception

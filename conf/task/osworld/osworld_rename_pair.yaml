@@ -1,0 +1,63 @@
+# @package _global_
+defaults:
+- /task/osworld/rename_directory
+- override /environment: osworld
+- override /design: paired
+- _self_
+task:
+  intervention:
+    id: osworld_rename_hint
+    specs:
+    - id: rename-shortcut-hint
+      factor: shortcut_hint
+      level: present
+      scope: agent
+      target: agent
+      modality: structured
+      hook: agent_build
+      function: harness.transforms.agent_edit
+      arguments:
+        operations:
+        - path: instructions
+          op: append
+          value: '
+
+            Hint: select the folder and press F2 to rename it.'
+        allowed_paths:
+        - instructions
+      # Apply this edit only to matching pages, steps, or conditions.
+      selector: {}
+      # Lower values apply first when several edits share a hook.
+      order: 0
+      # Maximum applications of this edit per episode.
+      max_applications: 1
+      # Fields this edit must leave unchanged.
+      held_fixed_fields:
+      - config
+      - tools
+  max_steps: 15
+  id: osworld_rename_pair
+agent:
+  spec:
+    system_prompt: Operate the desktop using the screenshot and mouse or keyboard
+      actions. Coordinates are pixels from the screenshot's top-left corner. Use the
+      file manager UI; do not open a terminal, run commands, or use code to complete
+      the task. Send DONE after checking the result, or FAIL if you cannot complete
+      it.
+    config:
+      vision_detail: high
+      # Use a JSON schema listing the task's allowed actions.
+      structured_actions: true
+environment:
+  adapter:
+    backend:
+      driver:
+        state_reader:
+          _target_: integrations.osworld.rename_state
+          # Pass this function as a callback instead of calling it now.
+          _partial_: true
+design:
+  repetitions: 1
+  shuffle: false
+  # Fail if any selected edit never changes its target.
+  require_intervention_application: true

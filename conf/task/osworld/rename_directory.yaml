@@ -1,0 +1,141 @@
+# @package _global_
+defaults:
+- override /environment: browser
+- _self_
+task:
+  id: e0df059f-28a6-4169-924f-b9623e7184cc
+  # Bump this when the starting setup or scoring changes.
+  fixture_version: OSWorld-fc31a9049664292fcb35d6e501ee1dc839f2cf6d
+  instruction: ${task.fixture.task_config.instruction}
+  # Features this task needs from the environment.
+  required_capabilities:
+  - visual_observation
+  - pointer_action
+  - keyboard_action
+  - computer_action
+  # Starting data passed to environment.reset().
+  fixture:
+    task_config:
+      id: e0df059f-28a6-4169-924f-b9623e7184cc
+      snapshot: os
+      instruction: I have a directory named "todo_list_Jan_1". Can you help me change
+        its name into "todo_list_Jan_2"?
+      source: https://help.ubuntu.com/lts/ubuntu-help/files-rename.html.en
+      trajectory: trajectories/
+      config:
+      - type: execute
+        parameters:
+          command: echo {CLIENT_PASSWORD} | sudo -S mkdir ~/Desktop/todo_list_Jan_1
+          shell: true
+      - type: execute
+        parameters:
+          command:
+          - python
+          - -c
+          - import pyautogui; import time; pyautogui.click({SCREEN_WIDTH_HALF}, {SCREEN_HEIGHT_HALF});
+            time.sleep(0.5);
+      related_apps:
+      - os
+      evaluator:
+        func: exact_match
+        result:
+          type: vm_command_line
+          command: '[ -d ~/Desktop/todo_list_Jan_2 ] && echo ''Directory exists.''
+            || echo ''Directory does not exist.'''
+          shell: true
+        expected:
+          type: rule
+          rules:
+            expected: 'Directory exists.
+
+              '
+      proxy: false
+      fixed_ip: false
+      possibility_of_env_change: low
+    expected_state:
+      old_exists: true
+      new_exists: false
+  available_actions:
+  - kind: CLICK
+    description: Click a screenshot location.
+    arguments:
+      x: 0
+      y: 0
+  - kind: DOUBLE_CLICK
+    description: Double-click a screenshot location.
+    arguments:
+      x: 0
+      y: 0
+  - kind: RIGHT_CLICK
+    description: Open a context menu at a screenshot location.
+    arguments:
+      x: 0
+      y: 0
+  - kind: MOVE_TO
+    description: Move the pointer.
+    arguments:
+      x: 0
+      y: 0
+  - kind: DRAG_TO
+    description: Drag from the current pointer location.
+    arguments:
+      x: 0
+      y: 0
+  - kind: SCROLL
+    description: Scroll vertically by wheel clicks; positive is up.
+    arguments:
+      dy: 0
+  - kind: TYPING
+    description: Type into the focused control; put the input in text.
+    arguments: {}
+  - kind: PRESS
+    description: Press a key such as f2 or enter.
+    arguments:
+      key: enter
+  - kind: HOTKEY
+    description: Press keys together, separated by +, such as ctrl+a.
+    arguments:
+      keys: ctrl+a
+  - kind: WAIT
+    description: Wait for the desktop to settle.
+    arguments: {}
+  - kind: DONE
+    description: Finish after checking that the task is complete.
+    arguments: {}
+  - kind: FAIL
+    description: Stop when the task cannot be completed.
+    arguments: {}
+  # Sequence used by the scripted agent and integration checker.
+  actions:
+  - kind: WAIT
+    arguments: {}
+  - kind: DONE
+    arguments: {}
+  # Scripted agent's fallback after its action list ends.
+  default_action:
+    kind: DONE
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors: []
+  # Notes for analysis; these do not enforce equality.
+  held_fixed:
+  - task.fixture
+  - environment.provider
+  - environment.snapshot
+  - agent.spec.config
+  outcomes:
+  - id: osworld_score
+    direction: maximize
+  - id: rename_completed
+    direction: maximize
+    function: integrations.osworld.rename_completed
+  - id: used_f2
+    direction: report
+    function: integrations.osworld.used_f2
+  - id: action_count
+    direction: report
+    function: integrations.outcomes.action_count
+  intervention:
+    id: control
+    specs: []
+  max_steps: 10
+  modality: screenshot

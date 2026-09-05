@@ -1,0 +1,74 @@
+# @package _global_
+defaults:
+- override /environment: structured
+- _self_
+task:
+  id: shared_workspace
+  # Bump this when the starting setup or scoring changes.
+  fixture_version: '1'
+  instruction: Record the agreed sequence in shared state, then finish.
+  # Features this task needs from the environment.
+  required_capabilities:
+  - multi_actor
+  - provenance
+  - persistent_state
+  - snapshot_restore
+  environment:
+    initial_state:
+      actors:
+        agent:
+          state:
+            role: editor
+          messages: []
+        partner:
+          state:
+            role: reviewer
+          messages: []
+      shared:
+        sequence: []
+      provenance: []
+      terminated: false
+      truncated: false
+    denied_action_kinds: []
+  # Starting data passed to environment.reset().
+  fixture:
+    state: ${task.environment.initial_state}
+    denied_action_kinds: ${task.environment.denied_action_kinds}
+  available_actions:
+  - kind: set_shared_state
+    description: Update fields in the shared state.
+    arguments:
+      values: object
+  - kind: finish
+    description: Finish the task.
+    arguments: {}
+  # Sequence used by the scripted agent and integration checker.
+  actions:
+  - kind: set_shared_state
+    arguments:
+      values:
+        sequence:
+        - inspect
+        - edit
+        - verify
+  - kind: finish
+  # Scripted agent's fallback after its action list ends.
+  default_action:
+    kind: finish
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors: []
+  # Notes for analysis; these do not enforce equality.
+  held_fixed:
+  - environment.initial_state.actors
+  outcomes:
+  - id: shared_sequence_length
+    direction: report
+    function: integrations.outcomes.shared_sequence_length
+  - id: action_count
+    direction: report
+    function: integrations.outcomes.action_count
+  intervention:
+    id: control
+    specs: []
+  max_steps: 10
+  modality: text

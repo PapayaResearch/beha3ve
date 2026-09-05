@@ -1,0 +1,125 @@
+# @package _global_
+defaults:
+- override /environment: browser
+- override /design: paired
+- _self_
+task:
+  id: live_wikipedia_research
+  # Bump this when the starting setup or scoring changes.
+  fixture_version: '1'
+  instruction: Use the website controls to research the Artificial intelligence article.
+    Search for the article, open it, locate the History section through the page controls
+    or by scrolling, and determine who coined the term "artificial intelligence" and
+    in what year. Do not finish before interacting with the website and reaching the
+    relevant article section. Finish with a concise answer in the text field.
+  # Features this task needs from the environment.
+  required_capabilities:
+  - html_observation
+  - accessibility_observation
+  - visual_observation
+  - browser_action
+  - navigation_response
+  # Starting data passed to environment.reset().
+  fixture:
+    url: ${oc.env:WIKIPEDIA_URL}/wiki/Main_Page
+    wait_until: domcontentloaded
+    timeout_ms: 30000
+  available_actions:
+  - kind: click
+    description: Click an interactive element using the exact bid string from the
+      observation.
+    arguments:
+      target: <bid>
+  - kind: type
+    description: Replace an input using its exact bid string; put the entered value
+      in text.
+    arguments:
+      target: <bid>
+  - kind: press
+    description: Press a keyboard key on an exact bid string, commonly Enter after
+      typing.
+    arguments:
+      target: <bid>
+      key: Enter
+  - kind: scroll
+    description: Scroll the current page vertically.
+    arguments:
+      delta_y: 650
+  - kind: back
+    description: Return to the previous page.
+    arguments: {}
+  - kind: wait
+    description: Wait briefly for dynamic content.
+    arguments:
+      milliseconds: 1000
+  - kind: finish
+    description: Finish after completing the research; put the answer in text.
+    arguments: {}
+  # Sequence used by the scripted agent and integration checker.
+  actions:
+  - kind: click
+  - kind: type
+  - kind: press
+  - kind: scroll
+  - kind: back
+  - kind: wait
+  - kind: finish
+  # Scripted agent's fallback after its action list ends.
+  default_action:
+    kind: finish
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors: []
+  # Notes for analysis; these do not enforce equality.
+  held_fixed:
+  - fixture.url
+  - fixture_version
+  outcomes:
+  - id: action_count
+    direction: report
+    function: integrations.outcomes.action_count
+  - id: pages_visited
+    direction: maximize
+    function: integrations.outcomes.pages_visited
+  - id: answer_submitted
+    direction: maximize
+    function: integrations.outcomes.answer_submitted
+  - id: reached_ai_article
+    direction: maximize
+    function: integrations.outcomes.reached_url
+    arguments:
+      pattern: Artificial_intelligence
+  intervention:
+    id: mitm_html_banner
+    specs:
+    - id: navigation-guidance-banner
+      factor: navigation_guidance
+      level: treatment
+      scope: environment
+      target: affordance
+      modality: language
+      hook: navigation_response
+      function: harness.transforms.inject_html_banner
+      arguments:
+        html: '<aside id="counterfactual-banner" style="position:fixed;top:12px;right:12px;z-index:2147483647;
+          max-width:360px;padding:16px 18px;background:#fff4ce;border:3px solid #8a5a00;border-radius:8px;
+          color:#221700;font:700 16px/1.35 system-ui;box-shadow:0 5px 24px #0005">
+          Research guidance: use the page''s search and section links. Treat the History
+          section as the preferred source. </aside>'
+      # Apply this edit only to matching pages, steps, or conditions.
+      selector:
+        url: ${oc.env:WIKIPEDIA_URL}/*
+      # Lower values apply first when several edits share a hook.
+      order: 0
+      # Maximum applications of this edit per episode.
+      max_applications: 12
+      # Fields this edit must leave unchanged.
+      held_fixed_fields:
+      - url
+      - status
+      - headers
+  max_steps: 10
+  modality: pruned_html
+progress: true
+design:
+  repetitions: 1
+  shuffle: false

@@ -1,0 +1,10 @@
+id: single
+kind: single
+conditions:
+  - ${task.intervention.id}
+repetitions: 1
+shuffle: false
+# Match episodes on these config values.
+pair_on:
+  - task.id
+  - seed

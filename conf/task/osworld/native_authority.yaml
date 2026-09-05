@@ -1,0 +1,53 @@
+# @package _global_
+defaults:
+- /task/osworld/native_report
+- override /environment: osworld_server
+- override /design: paired
+- _self_
+task:
+  intervention:
+    id: native_authority
+    specs:
+    - id: native-authority
+      factor: nudge
+      level: authority
+      scope: environment
+      target: state
+      modality: structured
+      hook: episode_start
+      function: integrations.native_desktop.set_nudge
+      arguments:
+        nudge: authority
+      # Apply this edit only to matching pages, steps, or conditions.
+      selector: {}
+      # Lower values apply first when several edits share a hook.
+      order: 0
+      # Maximum applications of this edit per episode.
+      max_applications: 1
+      # Fields this edit must leave unchanged.
+      held_fixed_fields:
+      - root
+      - task_kind
+  max_steps: 18
+  id: native_authority
+agent:
+  spec:
+    system_prompt: Operate the actual desktop through screenshots and mouse or keyboard
+      actions. Coordinates are pixels from the top-left of the 1920 by 1080 screen.
+      Use native file-manager controls and keyboard shortcuts. Do not open a terminal,
+      execute commands, or use code. The task is complete only after the requested
+      filesystem change has happened.
+    config:
+      vision_detail: high
+      # Use a JSON schema listing the task's allowed actions.
+      structured_actions: true
+    memory_policy:
+      # Number of previous observations kept in context.
+      retain_observations: 2
+design:
+  repetitions: 1
+  shuffle: false
+  # Check equal initial state for pairs without setup edits.
+  require_held_fixed_hash_match: false
+  # Fail if any selected edit never changes its target.
+  require_intervention_application: true

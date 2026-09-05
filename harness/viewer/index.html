@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trace Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;450;500;600;650;700&display=swap" rel="stylesheet">
+  <script src="/theme.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18"></script>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar flex flex-wrap items-end gap-4">
+    <h1>Counterfactual Trace Viewer</h1>
+    <div id="run-path" class="run-path"></div>
+    <div class="select-field">
+      <span class="field-label" data-tooltip="experiment"><label for="experiment-select">Experiment</label></span>
+      <select id="experiment-select"></select>
+    </div>
+    <div class="select-field">
+      <span class="field-label" data-tooltip="pair"><label for="pair-select">Episodes</label></span>
+      <select id="pair-select"></select>
+    </div>
+    <div class="select-field">
+      <span class="field-label" data-tooltip="theme"><label for="theme-select">Theme</label></span>
+      <select id="theme-select"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select>
+    </div>
+  </header>
+  <main class="app-shell min-w-0">
+    <aside class="steps-panel">
+      <div class="panel-heading"><strong data-tooltip="steps" tabindex="0">Steps</strong><span id="step-count"></span></div>
+      <div class="step-controls">
+        <button id="link-steps" type="button" aria-pressed="true">Unlink steps</button>
+        <label id="timeline-arm" hidden>Browse
+          <select id="timeline-side"><option value="left">Control</option><option value="right">Treatment</option></select>
+        </label>
+      </div>
+      <nav id="timeline" aria-label="Episode steps"></nav>
+    </aside>
+    <section class="comparison-panel">
+      <div class="step-heading">
+        <strong id="step-title"></strong>
+        <span id="pairing-status" class="pairing-status" tabindex="0"></span>
+      </div>
+      <div id="difference-banner" class="difference-banner" data-tooltip="comparison" tabindex="0"></div>
+      <div class="episode-columns">
+        <article id="left-pane" class="episode-pane control-pane"></article>
+        <article id="right-pane" class="episode-pane treatment-pane"></article>
+      </div>
+      <section id="outcomes" class="outcomes"></section>
+    </section>
+  </main>
+  <div id="copy-status" class="copy-status" role="status" aria-live="polite"></div>
+  <script src="/copy.js"></script>
+  <script src="/tooltips.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

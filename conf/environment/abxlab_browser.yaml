@@ -1,0 +1,19 @@
+defaults:
+  - browser
+  - _self_
+
+id: abxlab_browser
+base_url: ${oc.env:ABXLAB_URL}
+adapter:
+  backend:
+    # Capture this page region for text, HTML, and accessibility.
+    observation_selector: main
+    # Wait after navigation/actions before observing the page.
+    settle_ms: 1200
+    state_reader:
+      _target_: integrations.abxlab.shopping_state
+      # Pass this function as a callback instead of calling it now.
+      _partial_: true
+    response_transform:
+      _target_: integrations.abxlab.explicit_rating
+      _partial_: true

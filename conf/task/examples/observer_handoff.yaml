@@ -1,0 +1,68 @@
+# @package _global_
+defaults:
+- override /environment: computer_use
+- _self_
+task:
+  id: observer_handoff
+  # Bump this when the starting setup or scoring changes.
+  fixture_version: '1'
+  instruction: Move the pointer to the target, then finish.
+  # Features this task needs from the environment.
+  required_capabilities:
+  - visual_observation
+  - pointer_action
+  - snapshot_restore
+  environment:
+    initial_text: Move to the target at 20, 30.
+  # Starting data passed to environment.reset().
+  fixture:
+    state:
+      text: ${task.environment.initial_text}
+      screenshot: !!binary ""
+      cursor:
+        x: 0
+        y: 0
+      windows: []
+      last_action: null
+      last_tool_result: null
+      terminated: false
+      truncated: false
+  available_actions:
+  - kind: move_pointer
+    description: Move the pointer to screen coordinates.
+    arguments:
+      x: integer
+      y: integer
+  - kind: finish
+    description: Finish the task.
+    arguments: {}
+  # Sequence used by the scripted agent and integration checker.
+  actions:
+  - kind: move_pointer
+    arguments:
+      x: 20
+      y: 30
+  - kind: finish
+  # Scripted agent's fallback after its action list ends.
+  default_action:
+    kind: finish
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors: []
+  # Notes for analysis; these do not enforce equality.
+  held_fixed:
+  - fixture.state.windows
+  outcomes:
+  - id: pointer_distance
+    direction: minimize
+    function: integrations.outcomes.pointer_distance
+    arguments:
+      target_x: 20
+      target_y: 30
+  - id: action_count
+    direction: report
+    function: integrations.outcomes.action_count
+  intervention:
+    id: control
+    specs: []
+  max_steps: 10
+  modality: text

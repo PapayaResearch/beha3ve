@@ -1,0 +1,24 @@
+spec:
+  id: agent
+  instructions: ${task.instruction}
+  system_prompt: ""
+  tools: ${task.available_actions}
+  memory_policy:
+    # Number of previous agent turns retained in the prompt.
+    retain_turns: 6
+  scaffold:
+    _target_: harness.agents.LiteLLMAgent
+    # Pass the full AgentSpec to the agent constructor.
+    accepts_spec: true
+  config:
+    chat_model_args: ${agent.chat_model_args}
+    # Opt in only if the model API supports a seed parameter.
+    send_seed: false
+    # Request API-enforced JSON output where supported.
+    json_mode: true
+    modality: ${task.modality}
+    vision_detail: high
+    # Use a JSON schema listing the task's allowed actions.
+    structured_actions: false
+    # Text limit per observation sent to the model.
+    max_observation_chars: 8000

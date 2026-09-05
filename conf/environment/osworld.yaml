@@ -1,0 +1,45 @@
+id: osworld
+provider: docker
+vm_path: null
+snapshot: init_state
+adapter:
+  _target_: harness.environments.base.BaseEnvironmentAdapter
+  environment: computer_use
+  backend:
+    _target_: harness.environments.driver.DriverBackend
+    driver:
+      _target_: harness.environments.osworld.OSWorldDriver
+      environment_factory:
+        _target_: desktop_env.desktop_env.DesktopEnv
+        # Pass this function as a callback instead of calling it now.
+        _partial_: true
+        provider_name: ${environment.provider}
+        path_to_vm: ${environment.vm_path}
+        snapshot_name: ${environment.snapshot}
+        action_space: computer_13
+        require_a11y_tree: false
+        require_terminal: false
+        headless: true
+      max_steps: ${max_steps}
+      pause: 2.0
+      state_reader: null
+    # Features this environment adapter provides.
+    capabilities:
+      - visual_observation
+      - pointer_action
+      - keyboard_action
+      - computer_action
+      - state_inspection
+    action_kinds:
+      - CLICK
+      - DOUBLE_CLICK
+      - RIGHT_CLICK
+      - MOVE_TO
+      - DRAG_TO
+      - SCROLL
+      - TYPING
+      - PRESS
+      - HOTKEY
+      - WAIT
+      - DONE
+      - FAIL

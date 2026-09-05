@@ -1,0 +1,21 @@
+id: browser_memory
+adapter:
+  _target_: harness.environments.browser.BrowserEnvironment
+  backend:
+    _target_: harness.environments.browser.MemoryBrowserBackend
+    viewport:
+      width: 1280
+      height: 720
+# Features this environment adapter provides.
+capabilities:
+  - structured_observation
+  - visual_observation
+  - browser_action
+  - navigation_response
+  - html_observation
+  - accessibility_observation
+  - geometry_observation
+  - state_inspection
+  - snapshot_restore
+  - response_interception
+  - observation_interception

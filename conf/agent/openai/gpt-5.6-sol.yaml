@@ -1,0 +1,12 @@
+defaults:
+  - /agent/_shared@_here_
+  - _self_
+
+id: openai/gpt-5.6-sol
+chat_model_args:
+  model: openai/gpt-5.6-sol
+  temperature: null  # Use the model's default sampling behavior.
+  max_tokens: null  # Let LiteLLM/provider choose the output limit.
+  reasoning_effort: low
+  num_retries: 3
+  timeout: 120

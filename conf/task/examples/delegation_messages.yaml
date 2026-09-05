@@ -1,0 +1,71 @@
+# @package _global_
+defaults:
+- override /environment: structured
+- _self_
+task:
+  id: delegation_messages
+  # Bump this when the starting setup or scoring changes.
+  fixture_version: '1'
+  instruction: Send the proposed plan to the coordinator, then finish.
+  # Features this task needs from the environment.
+  required_capabilities:
+  - messages
+  - actor_specific_observation
+  - persistent_state
+  - snapshot_restore
+  environment:
+    initial_state:
+      actors:
+        agent:
+          state:
+            role: delegate
+          messages: []
+        coordinator:
+          state:
+            role: coordinator
+          messages: []
+      shared:
+        proposal: Plan A
+      provenance: []
+      terminated: false
+      truncated: false
+    denied_action_kinds: []
+  # Starting data passed to environment.reset().
+  fixture:
+    state: ${task.environment.initial_state}
+    denied_action_kinds: ${task.environment.denied_action_kinds}
+  available_actions:
+  - kind: message
+    description: Send a text message to another actor.
+    arguments:
+      recipient: string
+  - kind: finish
+    description: Finish the task.
+    arguments: {}
+  # Sequence used by the scripted agent and integration checker.
+  actions:
+  - kind: message
+    arguments:
+      recipient: coordinator
+    text: I propose Plan A.
+  - kind: finish
+  # Scripted agent's fallback after its action list ends.
+  default_action:
+    kind: finish
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors: []
+  # Notes for analysis; these do not enforce equality.
+  held_fixed:
+  - environment.initial_state.shared.proposal
+  outcomes:
+  - id: delivered_message_count
+    direction: report
+    function: integrations.outcomes.delivered_message_count
+  - id: action_count
+    direction: report
+    function: integrations.outcomes.action_count
+  intervention:
+    id: control
+    specs: []
+  max_steps: 10
+  modality: text

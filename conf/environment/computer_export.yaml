@@ -1,0 +1,16 @@
+id: computer_export
+adapter:
+  _target_: harness.environments.base.BaseEnvironmentAdapter
+  environment: computer_use
+  backend:
+    _target_: harness.environments.driver.DriverBackend
+    driver:
+      _target_: integrations.computer_export.ExportDialog
+    # Features this environment adapter provides.
+    capabilities:
+      - visual_observation
+      - pointer_action
+      - computer_action
+      - state_inspection
+    action_kinds:
+      - click

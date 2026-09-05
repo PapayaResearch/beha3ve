@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="450" viewBox="0 0 1100 450" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Counterfactual harness design</title>
+  <desc id="desc">Actions flow from agent through harness to environment. Observations return through the harness. Configured interventions are applied by the harness, which records trajectories and outcomes for control and treatment runs.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#64748B"/>
+    </marker>
+    <marker id="observation-arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10Z" fill="#147D70"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; text-anchor: middle; }
+      .node { font-size: 23px; font-weight: 600; }
+      .edge { font-size: 16px; }
+    </style>
+  </defs>
+
+  <rect width="1100" height="450" rx="16" fill="#FFFFFF"/>
+
+  <rect x="440" y="24" width="220" height="56" rx="10" fill="#F3D9AB"/>
+  <text x="550" y="59" fill="#674B22" font-size="19" font-weight="600">Interventions</text>
+
+  <rect x="40" y="166" width="220" height="130" rx="12" fill="#DCE3F5"/>
+  <text x="150" y="239" fill="#354670" class="node">Agent</text>
+
+  <rect x="440" y="166" width="220" height="130" rx="12" fill="#147D70"/>
+  <text x="550" y="225" fill="#FFFFFF" class="node">Harness</text>
+  <text x="550" y="253" fill="#D5F0E8" font-size="16">Control / treatment</text>
+
+  <rect x="840" y="166" width="220" height="130" rx="12" fill="#DCE7EE"/>
+  <text x="950" y="239" fill="#354F61" class="node">Environment</text>
+
+  <rect x="400" y="374" width="300" height="56" rx="10" fill="#E5E9EF"/>
+  <text x="550" y="409" fill="#475569" font-size="19" font-weight="600">Trajectories + outcomes</text>
+
+  <g stroke="#64748B" stroke-width="2" marker-end="url(#arrow)">
+    <path d="M550 92V154"/>
+    <path d="M272 205H428"/>
+    <path d="M672 205H828"/>
+    <path d="M550 308V362"/>
+  </g>
+  <g stroke="#147D70" stroke-width="2" marker-end="url(#observation-arrow)">
+    <path d="M428 255H272"/>
+    <path d="M828 255H672"/>
+  </g>
+
+  <text x="350" y="192" fill="#64748B" class="edge">Actions</text>
+  <text x="750" y="192" fill="#64748B" class="edge">Actions</text>
+  <text x="350" y="281" fill="#147D70" class="edge">Observations</text>
+  <text x="750" y="281" fill="#147D70" class="edge">Observations</text>
+</svg>

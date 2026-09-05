@@ -1,0 +1,19 @@
+id: structured
+adapter:
+  _target_: harness.environments.structured.StructuredEnvironment
+  backend:
+    _target_: harness.environments.structured.MemoryStructuredBackend
+    policy_oracle:
+      _target_: harness.environments.structured.RulePolicyOracle
+      denied_action_kinds: []
+# Features this environment adapter provides.
+capabilities:
+  - structured_observation
+  - actor_specific_observation
+  - messages
+  - multi_actor
+  - persistent_state
+  - provenance
+  - policy_oracle
+  - state_inspection
+  - snapshot_restore

@@ -1,0 +1,14 @@
+id: paired
+kind: paired
+conditions:
+  - control
+  - ${task.intervention.id}
+repetitions: 1
+shuffle: true
+# Match episodes on these config values.
+pair_on:
+  - task.id
+  - task.intervention.id
+  - seed
+# Check equal initial state for pairs without setup edits.
+require_held_fixed_hash_match: true

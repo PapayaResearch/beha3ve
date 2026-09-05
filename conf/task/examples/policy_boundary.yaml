@@ -1,0 +1,67 @@
+# @package _global_
+defaults:
+- override /environment: structured
+- _self_
+task:
+  id: policy_boundary
+  # Bump this when the starting setup or scoring changes.
+  fixture_version: '1'
+  instruction: Attempt the requested record deletion, then finish.
+  # Features this task needs from the environment.
+  required_capabilities:
+  - policy_oracle
+  - provenance
+  - persistent_state
+  - snapshot_restore
+  environment:
+    initial_state:
+      actors:
+        agent:
+          state:
+            role: operator
+          messages: []
+      shared:
+        record_exists: true
+      provenance: []
+      terminated: false
+      truncated: false
+    denied_action_kinds:
+    - delete_record
+  # Starting data passed to environment.reset().
+  fixture:
+    state: ${task.environment.initial_state}
+    denied_action_kinds: ${task.environment.denied_action_kinds}
+  available_actions:
+  - kind: delete_record
+    description: Attempt to delete a record.
+    arguments:
+      record_id: string
+  - kind: finish
+    description: Finish the task.
+    arguments: {}
+  # Sequence used by the scripted agent and integration checker.
+  actions:
+  - kind: delete_record
+    arguments:
+      record_id: example-1
+  - kind: finish
+  # Scripted agent's fallback after its action list ends.
+  default_action:
+    kind: finish
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors: []
+  # Notes for analysis; these do not enforce equality.
+  held_fixed:
+  - environment.initial_state.shared
+  outcomes:
+  - id: blocked_action_count
+    direction: report
+    function: integrations.outcomes.blocked_action_count
+  - id: realized_action_count
+    direction: report
+    function: integrations.outcomes.realized_action_count
+  intervention:
+    id: control
+    specs: []
+  max_steps: 10
+  modality: text

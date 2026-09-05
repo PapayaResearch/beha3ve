@@ -1,0 +1,68 @@
+# @package _global_
+defaults:
+- override /environment: browser_memory
+- _self_
+task:
+  id: form_attention
+  # Bump this when the starting setup or scoring changes.
+  fixture_version: '1'
+  instruction: Read the form and finish.
+  # Features this task needs from the environment.
+  required_capabilities:
+  - html_observation
+  - accessibility_observation
+  - visual_observation
+  - snapshot_restore
+  environment:
+    initial_url: /form
+    pages:
+      /form:
+        status: 200
+        headers:
+          content-type: text/html
+        body: <main><p>Choose one option.</p><button>Submit</button></main>
+        text: Choose one option. Submit
+        accessibility:
+          role: main
+          controls:
+          - role: button
+            name: Submit
+        geometry:
+          Submit:
+            x: 100
+            y: 100
+            width: 80
+            height: 30
+        metadata:
+          example_condition: language_and_visual_observation
+  # Starting data passed to environment.reset().
+  fixture:
+    url: /form
+    pages: ${task.environment.pages}
+  available_actions:
+  - kind: finish
+    description: Finish the task after reading the current observation.
+    arguments: {}
+  # Sequence used by the scripted agent and integration checker.
+  actions:
+  - kind: finish
+  # Scripted agent's fallback after its action list ends.
+  default_action:
+    kind: finish
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors: []
+  # Notes for analysis; these do not enforce equality.
+  held_fixed:
+  - environment.pages
+  outcomes:
+  - id: action_count
+    direction: report
+    function: integrations.outcomes.action_count
+  - id: terminated
+    direction: maximize
+    function: integrations.outcomes.terminated
+  intervention:
+    id: control
+    specs: []
+  max_steps: 10
+  modality: text

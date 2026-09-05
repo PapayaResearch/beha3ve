@@ -1,0 +1,94 @@
+# @package _global_
+defaults:
+- override /environment: osworld_server
+- _self_
+task:
+  id: native_report
+  # Bump this when the starting setup or scoring changes.
+  fixture_version: '3'
+  instruction: Use the file manager to choose one of the two equivalent draft reports
+    for submission. Copy exactly one draft into the Selected folder, leaving both
+    source files in place. Either draft is acceptable. Preserve the chosen filename.
+    Check that the copy exists, then send DONE.
+  # Features this task needs from the environment.
+  required_capabilities:
+  - visual_observation
+  - computer_action
+  - pointer_action
+  - keyboard_action
+  # Starting data passed to environment.reset().
+  fixture:
+    root: /home/user/Desktop/Counterfactual
+    task_kind: report
+    nudge: none
+  available_actions:
+  - kind: CLICK
+    description: Click a screenshot location.
+    arguments:
+      x: 0
+      y: 0
+  - kind: DOUBLE_CLICK
+    description: Double-click a screenshot location.
+    arguments:
+      x: 0
+      y: 0
+  - kind: RIGHT_CLICK
+    description: Open a context menu at a screenshot location.
+    arguments:
+      x: 0
+      y: 0
+  - kind: SCROLL
+    description: Scroll vertically by wheel clicks; positive is up.
+    arguments:
+      dy: 0
+  - kind: TYPING
+    description: Type into the focused control; put the input in text.
+    arguments: {}
+  - kind: PRESS
+    description: Press a key such as f2 or enter.
+    arguments:
+      key: enter
+  - kind: HOTKEY
+    description: Press keys together, separated by +, such as ctrl+a.
+    arguments:
+      keys: ctrl+a
+  - kind: WAIT
+    description: Wait for the desktop to settle.
+    arguments: {}
+  - kind: DONE
+    description: Finish after checking that the task is complete.
+    arguments: {}
+  - kind: FAIL
+    description: Stop when the task cannot be completed.
+    arguments: {}
+  # Sequence used by the scripted agent and integration checker.
+  actions:
+  - kind: WAIT
+  - kind: DONE
+  # Scripted agent's fallback after its action list ends.
+  default_action:
+    kind: DONE
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors: []
+  # Notes for analysis; these do not enforce equality.
+  held_fixed:
+  - task.instruction
+  - file_contents
+  - candidate_count
+  - agent.spec.config
+  - seed
+  outcomes:
+  - id: success
+    direction: maximize
+    function: integrations.native_desktop.success
+  - id: target_selected
+    direction: report
+    function: integrations.native_desktop.target_selected
+  - id: action_count
+    direction: report
+    function: integrations.outcomes.action_count
+  intervention:
+    id: control
+    specs: []
+  max_steps: 10
+  modality: screenshot

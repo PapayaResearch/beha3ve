@@ -1,0 +1,16 @@
+id: scripted
+spec:
+  id: agent
+  instructions: ${task.instruction}
+  system_prompt: ""
+  tools: []
+  memory_policy: {}
+  scaffold:
+    _target_: harness.testing.ScriptedAgent
+    # Pass the full AgentSpec to the agent constructor.
+    accepts_spec: true
+  config:
+    # Sequence used by the scripted agent and integration checker.
+    actions: ${task.actions}
+    # Scripted agent's fallback after its action list ends.
+    default_action: ${task.default_action}

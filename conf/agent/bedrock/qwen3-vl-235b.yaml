@@ -1,0 +1,16 @@
+defaults:
+  - /agent/_shared@_here_
+  - _self_
+
+id: bedrock/qwen3-vl-235b
+chat_model_args:
+  model: bedrock/converse/qwen.qwen3-vl-235b-a22b
+  temperature: null  # Use the model's default sampling behavior.
+  max_tokens: null  # Let LiteLLM/provider choose the output limit.
+  aws_region_name: ${oc.env:AWS_REGION_NAME,us-east-1}
+  num_retries: 3
+  timeout: 120
+spec:
+  config:
+    # Request API-enforced JSON output where supported.
+    json_mode: false

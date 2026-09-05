@@ -1,0 +1,93 @@
+# @package _global_
+defaults:
+- override /environment: computer_export
+- override /design: paired
+- _self_
+task:
+  id: computer_export
+  # Bump this when the starting setup or scoring changes.
+  fixture_version: '1'
+  instruction: Export the image using the dialog. Choose the recommended format if
+    the dialog shows a recommendation; otherwise choose PNG. Click the corresponding
+    Save button. You see an 800 by 500 screenshot and act with pixel coordinates measured
+    from its top-left corner. There are no element IDs. Saving ends the task.
+  # Features this task needs from the environment.
+  required_capabilities:
+  - visual_observation
+  - pointer_action
+  - computer_action
+  # Starting data passed to environment.reset().
+  fixture: {}
+  available_actions:
+  - kind: click
+    description: Click a location in the screenshot using pixel coordinates.
+    arguments:
+      x: 0
+      y: 0
+  # Sequence used by the scripted agent and integration checker.
+  actions:
+  - kind: click
+    arguments:
+      x: 260
+      y: 340
+  # Scripted agent's fallback after its action list ends.
+  default_action:
+    kind: click
+    arguments:
+      x: 260
+      y: 340
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors: []
+  # Notes for analysis; these do not enforce equality.
+  held_fixed:
+  - instruction
+  - button_positions
+  - initial_application_state
+  outcomes:
+  - id: selected_format
+    direction: report
+    function: integrations.computer_export.selected_format
+  - id: jpeg_selected
+    direction: report
+    function: integrations.computer_export.jpeg_selected
+  - id: saved
+    direction: maximize
+    function: integrations.outcomes.terminated
+  intervention:
+    id: jpeg_recommendation
+    specs:
+    - id: jpeg-recommendation
+      factor: recommendation
+      level: jpeg
+      scope: environment
+      target: observation
+      modality: visual
+      hook: observation
+      function: integrations.computer_export.recommend_jpeg
+      arguments: {}
+      # Apply this edit only to matching pages, steps, or conditions.
+      selector:
+        step: 0
+      # Lower values apply first when several edits share a hook.
+      order: 0
+      # Maximum applications of this edit per episode.
+      max_applications: 1
+      # Fields this edit must leave unchanged.
+      held_fixed_fields:
+      - visual.width
+      - visual.height
+      - text
+      - structured
+  max_steps: 1
+  modality: screenshot
+agent:
+  spec:
+    config:
+      vision_detail: high
+      # Use a JSON schema listing the task's allowed actions.
+      structured_actions: true
+design:
+  repetitions: 1
+  shuffle: false
+  # Fail if any selected edit never changes its target.
+  require_intervention_application: true

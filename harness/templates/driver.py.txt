@@ -1,0 +1,30 @@
+from typing import Any
+from collections.abc import Mapping
+from harness.environments.driver import Frame
+from harness.schema import Action
+
+
+class Driver:
+    # A runnable text example. Replace these methods with your environment SDK.
+    def __init__(self) -> None:
+        self.text = ""
+
+    def reset(self, seed: int | None, options: Mapping[str, Any]) -> Frame:
+        # Reset the actual remote application/VM here, including accounts and persistent state.
+        del seed
+        self.text = options["text"]
+        return Frame(text=self.text, state={"text": self.text})
+
+    def step(self, action: Action) -> Frame:
+        # Dispatch the action, wait for completion, then capture state and observation atomically.
+        if action.kind == "set_text":
+            self.text = action.text
+        return Frame(
+            text=self.text,
+            state={"text": self.text},
+            terminated=action.kind == "finish"
+        )
+
+    def close(self) -> None:
+        # Release the session, connection, or VM here.
+        self.text = ""

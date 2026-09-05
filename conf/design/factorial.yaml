@@ -1,0 +1,13 @@
+id: factorial
+kind: factorial
+conditions: []
+repetitions: 1
+shuffle: true
+# Match episodes on these config values.
+pair_on:
+  - task.id
+  - seed
+# Read the factors from the task; run every combination.
+cross_factors: ${task.factors}
+# Require an applied edit for every selected factor level.
+require_factor_bindings: true

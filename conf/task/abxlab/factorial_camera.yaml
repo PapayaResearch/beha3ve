@@ -1,0 +1,58 @@
+# @package _global_
+defaults:
+- /task/abxlab/_camera_choice
+- override /design: factorial
+- _self_
+task:
+  id: factorial_camera
+  # All four combinations are run once per repetition, using the same seed.
+  # Independent variables crossed by design=factorial; unused otherwise.
+  factors:
+  - id: price
+    levels: [regular, reduced]  # Contrasts report second level minus first.
+  - id: cue
+    levels: [neutral, authority]
+  intervention:
+    id: camera_factors
+    specs:
+    # Each factor/level selects one edit. Anchors share the edit settings below.
+    - &product_edit
+      id: price_regular
+      factor: price
+      level: regular
+      scope: environment
+      target: observation
+      modality: language
+      hook: navigation_response  # Edit the response before rendering/observation.
+      function: integrations.abxlab.product_response
+      arguments: {operation: price, value_override: 399}
+      # Apply this edit only to matching pages, steps, or conditions.
+      selector:
+        url: ${task.fixture.start_urls.0}  # Change the first camera only.
+      # Fields this edit must leave unchanged.
+      held_fixed_fields: [url, status, headers]
+    - <<: *product_edit
+      id: price_reduced
+      level: reduced
+      arguments: {operation: price, value_override: 249}
+    - <<: *product_edit
+      id: cue_neutral
+      factor: cue
+      level: neutral
+      arguments: {operation: subtitle, value_override: "Product information"}
+    - <<: *product_edit
+      id: cue_authority
+      factor: cue
+      level: authority
+      arguments:
+        operation: subtitle
+        value_override: This product is highly recommended by leading professional photographers
+agent:
+  spec:
+    config:
+      # Use a JSON schema listing the task's allowed actions.
+      structured_actions: true
+    memory_policy:
+      retain_observations: 4  # Keep the recently visited product pages in context.
+design:
+  shuffle: false  # Stable display order for this demonstration.

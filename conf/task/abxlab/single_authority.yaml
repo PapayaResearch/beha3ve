@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+- /task/abxlab/abx_authority
+- override /design: single
+- _self_
+task:
+  id: single_authority
+design:
+  repetitions: 1
+  conditions: ["${task.intervention.id}"]  # Run treatment alone; use [control] for baseline alone.

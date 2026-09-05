@@ -1,0 +1,36 @@
+id: osworld_server
+endpoint: ${oc.env:OSWORLD_ENDPOINT}
+adapter:
+  _target_: harness.environments.base.BaseEnvironmentAdapter
+  environment: computer_use
+  backend:
+    _target_: harness.environments.driver.DriverBackend
+    driver:
+      _target_: harness.environments.osworld_server.OSWorldServerDriver
+      endpoint: ${environment.endpoint}
+      max_steps: ${max_steps}
+      setup:
+        _target_: integrations.native_desktop.prepare
+        # Pass this function as a callback instead of calling it now.
+        _partial_: true
+      state_reader:
+        _target_: integrations.native_desktop.read_state
+        _partial_: true
+    # Features this environment adapter provides.
+    capabilities:
+      - visual_observation
+      - computer_action
+      - pointer_action
+      - keyboard_action
+      - state_inspection
+    action_kinds:
+      - CLICK
+      - DOUBLE_CLICK
+      - RIGHT_CLICK
+      - TYPING
+      - PRESS
+      - HOTKEY
+      - SCROLL
+      - WAIT
+      - DONE
+      - FAIL

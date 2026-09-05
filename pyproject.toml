@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beha3ve"
+version = "0.1.0"
+description = "Minimal benchmark-neutral counterfactual agent harness"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "hydra-core==1.3.2",
+    "litellm>=1.80.0,<2.0.0",
+    "omegaconf==2.3.0",
+    "pydantic>=2.12.0",
+    "python-dotenv>=1.1.0,<2.0.0",
+    "tenacity>=9.1.2,<10.0.0",
+    "boto3>=1.40.0,<2.0.0",
+    "tqdm>=4.65.0",
+    "pandas>=2.2.0",
+    "PyYAML>=6.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=4.2.0",
+    "pytest>=8.4.0",
+    "ruff>=0.12.0"
+]
+browser = [
+    "playwright>=1.50.0,<2.0.0",
+    "beautifulsoup4>=4.12.0,<5.0.0"
+]
+joblib = [
+    "hydra-joblib-launcher>=1.2.0"
+]
+
+[project.scripts]
+view = "harness.trace_viewer:main"
+integrate = "harness.integration:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "harness*",
+    "integrations*"
+]
+
+[tool.setuptools.package-data]
+harness = ["viewer/*.html", "viewer/*.css", "viewer/*.js", "templates/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 192
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "UP",
+    "Q",
+    "I"
+]
+ignore = ["UP031", "I001"]
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "double"
+multiline-quotes = "double"
+docstring-quotes = "double"
+avoid-escape = false

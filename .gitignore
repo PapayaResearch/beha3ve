@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
+build/
+.DS_Store
+.playwright-cli/
+/output/playwright/
+runs/
+/reports/
+.env
+!.env.example
+/integrations/abxlab_import.py
+/conf/experiment/generated/

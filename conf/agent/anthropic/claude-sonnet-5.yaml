@@ -1,0 +1,11 @@
+defaults:
+  - /agent/_shared@_here_
+  - _self_
+
+id: anthropic/claude-sonnet-5
+chat_model_args:
+  model: anthropic/claude-sonnet-5
+  temperature: null  # Use the model's default sampling behavior.
+  max_tokens: null  # Let LiteLLM/provider choose the output limit.
+  num_retries: 3
+  timeout: 120
