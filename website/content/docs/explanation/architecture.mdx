@@ -1,0 +1,61 @@
+---
+title: Architecture and episode lifecycle
+description: How we run an LLM experiment with interventions and save the results.
+sources:
+  - run.py
+  - harness/runner.py
+  - harness/environments/base.py
+  - harness/agents.py
+  - harness/artifacts.py
+---
+
+We implement agents, environments, and interventions separately so you can reuse a task with different agents or experimental conditions.
+
+## Experiment configuration
+
+You select the task, model, environment, and experimental design through configuration files and command-line arguments. We use Hydra to load those settings and prepare the requested conditions and repetitions.
+
+In control, no treatment interventions are applied. In treatment, we apply the selected interventions. For a factorial experiment, you specify which intervention corresponds to each factor level. With the standard command-line runner, conditions execute sequentially.
+
+## Preparing a run
+
+For each run, we initialize the agent and reset the environment using the task's starting data. Any changes to the agent configuration are applied before agent construction. Any setup interventions are applied during environment reset.
+
+We check that the environment integration supports the required observations and actions. We also check access to the intervention points. For example, you need access to a browser's navigation response to edit HTML before rendering.
+
+## Agent interactions
+
+The observation and action edits below are optional. You configure them at the points where you want to intervene.
+
+```mermaid
+flowchart TD
+  E(Environment) -->|1. Observation| I(Intervention layer)
+  I -->|2. Edited observation| A(Agent)
+  A -->|3. Action| I
+  I -->|4. Edited action| E
+  classDef emphasis fill:var(--selection),stroke:var(--accent),stroke-width:2
+  class I emphasis
+```
+
+At each step:
+
+1. We prepare an observation and apply any configured observation edits.
+2. The agent receives the observation and chooses an action.
+3. We apply any configured action edits and execute the action in the environment.
+4. We save the action with its resulting observation and available environment state. We save intervention details alongside them.
+
+The interaction continues until the task ends or the maximum number of steps is reached. We mark a run as truncated when it reaches that limit. We save this flag on the final transition; it may not appear in the saved environment state.
+
+## Saving results
+
+After the run, we evaluate the outcome functions using the trajectory and final environment state. We save the results alongside the configuration, observations, actions, snapshots, and intervention details.
+
+For model requests, we select and format the observations according to your agent settings. The saved environment observation can include fields that were not sent to the model. Inspect the saved request to see the input used for that model call.
+
+## Inspecting and resuming runs
+
+Use the trace viewer to inspect saved runs and compare conditions. You can also use the replay API to inspect a saved pause. Neither operation requires another model call.
+
+To resume execution, you need an environment integration that supports restoration. See [Environment support and restoration](./capabilities-and-restoration.mdx).
+
+To schedule multiple agents, use the [multi-actor Python API](../guides/multi-actor-experiments.mdx). With the standard command-line runner, you run one agent per condition.

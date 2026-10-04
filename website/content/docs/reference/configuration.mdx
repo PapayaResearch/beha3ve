@@ -1,0 +1,101 @@
+---
+title: Configuration
+description: How to configure an experiment with Hydra.
+sources:
+  - conf/config.yaml
+  - conf/agent/_shared.yaml
+  - conf/agent/scripted.yaml
+  - conf/design/single.yaml
+  - conf/design/paired.yaml
+  - conf/design/factorial.yaml
+  - harness/agents.py
+  - run.py
+---
+
+We use Hydra to load YAML configuration from `conf/` and apply your command-line overrides. A task file begins with `# @package _global_` when we set multiple configuration groups together.
+
+## Configuration groups
+
+| Group | Purpose |
+|---|---|
+| `task` | Instructions, starting data, actions, outcomes, interventions, and default run settings |
+| `environment` | Adapter, backend, connection, and supported features |
+| `agent` | Agent specification and provider request parameters |
+| `design` | Conditions, factor combinations, repetitions, matching, and ordering |
+| `experiment` | Optional named overrides; create `conf/experiment/` as needed |
+
+We configure the Wikipedia research task and an OpenAI model by default. For that task, we use a paired design instead of the shared single-condition default. Read the composed settings instead of inferring effective values from `conf/config.yaml` alone.
+
+## Run fields
+
+| Field | Shared value or behavior |
+|---|---|
+| `seed` | `0`; each repetition adds its index |
+| `schema_version` | `"1"` |
+| `max_steps` | `${task.max_steps}` |
+| `progress` | `true` |
+| `experiment_id` | `${task.id}` |
+| `run_id` | `${experiment_id}` |
+| `episode_id` | `${task.id}-${seed}`; condition suffixes are added when needed |
+| `output_dir` | `${hydra:runtime.output_dir}/artifacts` |
+| `hydra.run.dir` | `runs/${experiment_id}` |
+| `hydra.sweep.dir` | `runs/${experiment_id}-sweep` |
+| `hydra.sweep.subdir` | `${hydra.job.num}` |
+| `hydra.job.chdir` | `false` |
+
+`max_steps` is the effective action budget passed to the episode runner. Its direct Python constructor defaults to 50; task configurations usually set 10 or their own budget.
+
+## Task fields
+
+| Field | Meaning |
+|---|---|
+| `id` | Task identifier saved in artifacts |
+| `fixture_version` | Version for the starting setup and scoring definition |
+| `instruction` | Goal presented to the agent |
+| `fixture` | Options passed to environment reset |
+| `environment` | Task-specific starting data and environment settings |
+| `modality` | `pruned_html`, `accessibility_tree`, `screenshot`, `text`, or a list |
+| `max_steps` | Task's default action budget |
+| `available_actions` | Action kinds, argument examples, and descriptions |
+| `required_capabilities` | Features checked against the instantiated environment |
+| `actions` | Action sequence for environment checks; does not set the LLM's actions |
+| `default_action` | Fallback action for the testing agent; unused by LLM agents |
+| `outcomes` | Outcome IDs, directions, function paths, and arguments |
+| `factors` | IDs, levels, and optional expected relations for factorial designs |
+| `held_fixed` | Descriptive notes saved with the run |
+| `intervention.id` | Treatment identifier; `control` means no selected specs |
+| `intervention.specs` | Intervention specifications |
+
+Task fields are composed mappings rather than one strict task model. Referenced values and the constructed objects determine which fields a particular task needs.
+
+## Design fields
+
+| Field | Meaning |
+|---|---|
+| `id`, `kind` | `single`, `paired`, or `factorial` |
+| `conditions` | Explicit condition IDs; paired defaults to control then the task intervention |
+| `repetitions` | Positive repetition count; default 1 |
+| `shuffle` | Shuffle materialized conditions; paired and factorial defaults are true |
+| `pair_on` | Configuration paths used for matching |
+| `cross_factors` | Factor definitions; factorial defaults to `${task.factors}` |
+| `require_held_fixed_hash_match` | Paired initial-state check, except for treatment specs using `episode_start` |
+| `require_factor_bindings` | Require configured and observed factor levels; true in the factorial profile |
+| `require_intervention_application` | Optional check that every selected spec changed a target; use Hydra `+` when adding an absent key |
+
+The shipped pair matching paths are `task.id`, `task.intervention.id`, and `seed`. Add a case ID path for a task that reuses its definition across cases. Numeric pair summaries require exactly two conditions.
+
+## Agent fields
+
+`agent.spec` contains `id`, `instructions`, `system_prompt`, `tools`, `memory_policy`, `scaffold`, and `config`. `scaffold._target_` identifies the implementation. `accepts_spec` defaults to true when the agent builder reads it.
+
+Shared model settings select `LiteLLMAgent` and reference `agent.chat_model_args`. Shared configuration sets `send_seed=false`, `json_mode=true`, `vision_detail=high`, `structured_actions=false`, and `max_observation_chars=8000`. The modality follows `task.modality`. Shared action history retains six turns.
+
+Provider arguments such as model, timeout, retry count, temperature, and token limits belong under `agent.chat_model_args`. They are passed through LiteLLM after removing `None` values. Provider support varies. See [Configuring agents and observations](../guides/configure-agents-and-observations.mdx).
+
+## Environment fields and variables
+
+`environment.adapter._target_` identifies the adapter. Nested backend and driver mappings supply construction settings. Browser configuration includes observation selection, setup and state-reader callbacks, and navigation behavior. Desktop profiles supply service endpoints or SDK lifecycle settings.
+
+We check the operations implemented by the selected environment. You must implement an operation before adding it to the supported-feature list.
+
+The shipped `.env.example` includes `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `AWS_REGION_NAME`, `ABXLAB_URL`, `OSWORLD_ENDPOINT`, and `WIKIPEDIA_URL`. Integration generation can add `NAME_URL` or `NAME_ENDPOINT` variables. See [Installing and configuring](../guides/install-and-configure.mdx).

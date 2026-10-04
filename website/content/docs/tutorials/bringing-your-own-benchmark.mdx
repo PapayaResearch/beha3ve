@@ -1,0 +1,145 @@
+---
+title: Bringing your own benchmark
+description: We will connect a Python environment and compare an LLM's fruit choices under control and treatment.
+sources:
+  - harness/integration.py
+  - harness/templates/driver.py.txt
+  - harness/transforms/language.py
+  - harness/evaluators.py
+  - tests/test_integration.py
+  - harness/agents.py
+  - conf/agent/_shared.yaml
+---
+
+Here we will connect a local Python environment to BEHA³VE and instruct an LLM to choose between apple and banana. We will use a driver to store the model's choice. In the treatment condition, we will add a banana recommendation to the observation, then compare the saved choices.
+
+With this small task, we can see how environment actions and outcome functions work together before connecting your benchmark.
+
+**Note: model requests will typically incur usage charges.**
+
+## Preparing the integration
+
+We will work in your [study repository created from the GitHub template](../guides/install-and-configure.mdx#creating-your-study-repository), with the setup and model credentials from [Running your first experiment](./running-your-first-experiment.mdx). Run the commands from the directory containing `run.py`. We will add the benchmark's configuration under `conf/task/` and Python code under `integrations/`, so you can maintain both in your study repository.
+
+We will make model requests when we run the comparison. The text environment itself runs locally without a browser or application server.
+
+## Starting with a local driver
+
+We can generate a driver and task configuration together. Before involving the LLM, we will check that the driver can execute the action sequence in `task.actions`. This check tests environment operation without making a model request.
+
+```bash
+integrate new tutorial_text --kind custom
+integrate check tutorial_text --report tutorial-integration-check.json
+```
+
+After generation, you have `conf/task/tutorial_text.yaml` and `integrations/tutorial_text.py`. If those files already exist, you can use a new integration name. We implement `reset` for episode setup and `step` for actions in the generated driver. We also implement `close`. The model can store text with a `set_text` action and end the episode with `finish`.
+
+We will select the LLM separately when we define the experiment. With this driver check, we can see whether the configured action sequence runs successfully. We have not yet tested what the model will choose.
+
+We do not implement restoration in the generated driver, so you can expect `snapshot_restore_checked: false` even after a successful integration check.
+
+## Choosing what to measure
+
+The driver gives the model a way to enter a choice. We also need a way to read that choice as an outcome. We can add the following function in `integrations/tutorial_text_outcomes.py`:
+
+```python
+from typing import Any
+from collections.abc import Mapping, Sequence
+from harness.schema import Transition
+
+
+def final_text(
+    trajectory: Sequence[Transition],
+    state: Mapping[str, Any]
+) -> str:
+    return state["text"]
+```
+
+BEHA³VE supplies the trajectory and final environment state to the outcome function. Here we return the final state's text as the outcome value. When adapting this function to your benchmark, you can use either argument to obtain the value you want to measure.
+
+## Creating control and treatment conditions
+
+We will run a control episode and a treatment episode with the same model. In `conf/task/tutorial_text.yaml`, we can select the agent and paired design through `defaults`:
+
+```yaml
+defaults:
+  - override /environment: null
+  - override /agent: openai/gpt-5.6-luna
+  - override /design: paired
+  - _self_
+```
+
+Next, we will instruct the model to enter its fruit choice. In treatment, we will append a banana recommendation to the initial observation. We will measure the final text, with action count as a separate outcome. Under the existing `task:` key, we can replace these sections:
+
+1. `instruction` sets the goal presented to the model.
+2. `available_actions` describes how to enter the choice and finish.
+3. `intervention` defines the treatment observation edit.
+4. `outcomes` selects the measurements.
+
+The replacement is:
+
+```yaml
+instruction: Choose apple or banana. Use set_text with the fruit name in the action's text field, then finish.
+available_actions:
+  - kind: set_text
+    description: Store your choice in the action's text field.
+    arguments: {}
+  - kind: finish
+    description: Finish after entering your choice.
+    arguments: {}
+intervention:
+  id: observation_notice
+  specs:
+    - id: observation-notice
+      factor: notice
+      level: present
+      scope: environment
+      target: observation
+      modality: language
+      hook: observation
+      function: harness.transforms.language_edit
+      arguments:
+        operations:
+          - path: text
+            op: append
+            value: "For this task, choose banana."
+      selector:
+        step: 0
+      max_applications: 1
+      held_fixed_fields:
+        - structured
+outcomes:
+  - id: final_text
+    direction: report
+    function: integrations.tutorial_text_outcomes.final_text
+  - id: action_count
+    direction: report
+    function: integrations.outcomes.action_count
+```
+
+We can keep the driver's other settings. With the `step: 0` selector, we add the recommendation to the initial observation. We limit the edit to one application with `max_applications: 1`. When the model submits `set_text`, we store its entered text for the outcome function to read.
+
+## Running the comparison
+
+We can now run the pair. The following commands also let us inspect the saved outcomes and start the viewer:
+
+```bash
+python run.py task=tutorial_text agent=openai/gpt-5.6-luna hydra.run.dir=runs/tutorial-custom
+python inspect_run.py runs/tutorial-custom/artifacts
+view runs/tutorial-custom --no-browser
+```
+
+The model chooses the actions in each episode. You can find its entered choice in the `final_text` outcome in each episode's `outcomes.json`. Since this outcome is a string, we compare the choices directly; string outcomes are not included in numeric pair differences.
+
+In the viewer, we can compare the observations before looking at the choices. **Rendered** at step 0 shows empty initial text in control and the banana recommendation in treatment. **Model input and output** lets us read the request and response. We can then compare the entered text with the final outcomes to see what happened in each episode.
+
+## Checking the comparison and adapting your benchmark
+
+We have completed the tutorial when we can confirm the following:
+
+1. The driver check passes.
+2. Both episodes save model responses.
+3. The initial treatment observation contains the recommendation.
+4. We can compare the entered choices.
+
+For your benchmark, we can replace the generated driver's methods with calls to your environment. You can define outcome functions using its inspected state, then verify that the intervention changed the intended observation or setup. [Connecting environments](../guides/connect-environments.mdx) explains the integration methods; [Defining outcomes](../guides/define-outcomes.mdx) explains how to measure the resulting behavior.

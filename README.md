@@ -1,3 +1,13 @@
+<p align="center">
+  <img src="website/assets/logo.svg" alt="BEHA³VE" width="800">
+</p>
+
+<p align="center">
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat" alt="Python 3.11 or later"></a>
+  <a href="https://github.com/PapayaResearch/wab/generate"><img src="https://img.shields.io/badge/GitHub-Use_this_template-e9966f?style=flat" alt="Use this GitHub template"></a>
+  <a href="website/content/docs/index.mdx"><img src="https://img.shields.io/badge/Read_the-docs-e9966f?style=flat" alt="Read the documentation"></a>
+</p>
+
 # BEHA<sup>3</sup>VE: A Counterfactual-oriented Harness for Studying Agent Behavior
 
 ### BEHA<sup>3</sup>VE → **B**ehavioral **E**valuation of **H**ow **A**I **A**gents **A**ct in **V**ariable **E**nvironments
@@ -12,6 +22,8 @@ For more on the design philosophy behind this, see our ICLR 2026 paper on **[ABx
 
 This file describes how to install, run, configure, and inspect experiments. **[BYOB.md](BYOB.md)** describes how to define interventions, add new environments, customize agents, and work with saved logs, and **[EXAMPLES.md](EXAMPLES.md)** discusses the included tasks, run commands, etc.
 
+See also the [documentation](website/content/docs/index.mdx) for tutorials, guides, and reference pages.
+
 
 We also provide a **trace viewer** to allow easy inspection of counterfactually paired trajectories:
 
@@ -25,7 +37,7 @@ Control and treatment trajectories then run independently and can take different
 
 ## Installation
 
-Clone this repository, then:
+On the [GitHub repository](https://github.com/PapayaResearch/wab), select **Use this template → Create a new repository** to create a repository for your study. Clone your new repository, then run the following from the directory containing `run.py`:
 
 ```bash
 conda create -n beha3ve python=3.11
@@ -107,7 +119,7 @@ uv pip install -e ".[joblib]"
 python run.py -m task=abxlab/abx_authority,abxlab/abx_social_proof 'seed=range(0,100)' hydra/launcher=joblib hydra.launcher.n_jobs=4
 ```
 
-To generate case configs at scale, we have the example script [`generate-experiments.py`](scripts/generate_experiments.py), which default to ABxLab's [matched-rating product pairs](https://github.com/PapayaResearch/abxlab/blob/main/tasks/product_pairs-matched-ratings.csv).
+To generate case configs at scale, we have the example script [`generate_experiments.py`](scripts/generate_experiments.py), which defaults to ABxLab's [matched-rating product pairs](https://github.com/PapayaResearch/abxlab/blob/main/tasks/product_pairs-matched-ratings.csv).
 
 ```bash
 python scripts/generate_experiments.py --task abxlab/abx_social_proof --exp-dir conf/experiment/generated/abxlab

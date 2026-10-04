@@ -1,0 +1,4 @@
+{
+  "title": "Reference",
+  "pages": ["commands", "configuration", "intervention-hooks-and-transforms", "agent-and-environment-interfaces", "public-python-api", "artifacts-and-schemas", "example-catalog"]
+}

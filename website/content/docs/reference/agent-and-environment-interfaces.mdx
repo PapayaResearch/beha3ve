@@ -1,0 +1,99 @@
+---
+title: Agent and environment interfaces
+description: How to connect agents and environments to BEHA³VE.
+sources:
+  - harness/agents.py
+  - harness/runner.py
+  - harness/environments/base.py
+  - harness/environments/driver.py
+  - harness/environments/browser.py
+  - harness/environments/osworld_server.py
+  - harness/environments/__init__.py
+---
+
+Implement these methods to connect your agent or environment to BEHA³VE. Select your class or callback with a dotted `_target_` path in the Hydra configuration.
+
+## Agent methods
+
+| Method | Required behavior |
+|---|---|
+| `reset(seed: int \| None = None) -> None` | Prepare the agent for a fresh episode |
+| `act(observation: Observation) -> Action` | Choose and return one action |
+
+`build_agent(spec)` constructs the class from `spec.scaffold`. `accepts_spec=true` passes `spec` and `spec.config`; `false` passes configuration arguments alone. The builder checks that `reset` and `act` exist.
+
+`LiteLLMAgent` additionally receives `chat_model_args`. Optional constructor settings are `send_seed=false`, `json_mode=true`, `modality="pruned_html"`, `vision_detail="auto"`, `max_observation_chars=8000`, `completion=None`, and `structured_actions=false`. We override some constructor defaults in the shared configuration.
+
+## Environment methods
+
+| Method | Return or purpose |
+|---|---|
+| `reset(seed=None, options=None)` | `(Observation, Snapshot)` |
+| `step(action)` | `Transition` |
+| `inspect()` | Mapping with current state used by evaluators |
+| `observe(actor_id="agent")` | Current observation |
+| `observe_for_actor(actor_id)` | Actor-specific observation |
+| `snapshot()` | `Snapshot` containing current state and observation |
+| `restore(snapshot)` | Restored `Observation`, when implemented |
+| `close()` | Release backend resources |
+
+`BaseEnvironmentAdapter` wraps a backend and applies the configured intervention runtime around reset, actions, observations, and snapshots. Its constructor accepts `backend`, optional `runtime`, `episode_id`, `environment`, `agent`, `task_id`, and `condition`.
+
+Declare the operations implemented by the backend in `capabilities`. `require_capabilities(required)` raises `EnvironmentCapabilityError` if a required feature is absent. A method's presence does not establish that the backend implements meaningful restoration.
+
+## Driver methods and Frame
+
+| Method | Return or purpose |
+|---|---|
+| `reset(seed, options)` | `Frame` from a freshly prepared case |
+| `step(action)` | `Frame` after executing the action |
+| `close()` | Release the session |
+| `checkpoint()` | Optional checkpoint used when restoration is advertised |
+| `restore(checkpoint)` | Optional restored `Frame` |
+
+`DriverBackend(driver, capabilities=("text_observation", "state_inspection"), action_kinds=("finish",))` adapts a driver to the environment methods. It adds observation interception. It rejects transport-level response, navigation, and message interception capabilities because those need native backend support.
+
+`Frame` fields are `text`, `structured`, `screenshot`, `width`, `height`, `state`, `reward`, `terminated`, `truncated`, and `info`. Screenshot data must be PNG bytes when present. State is evaluator evidence; it is separate from the observation fields.
+
+## HTTPDriver messages
+
+`HTTPDriver(endpoint, timeout=30.0)` sends JSON POST requests to the endpoint's operation paths. A response must be a JSON object with the expected fields.
+
+| Path | Request | Response |
+|---|---|---|
+| `/reset` | `seed`, `options` | `session_id`, `frame` |
+| `/step` | `session_id`, serialized `action` | `frame` |
+| `/close` | `session_id` | JSON object; contents are not used |
+| `/checkpoint` | `session_id` | `checkpoint` |
+| `/restore` | `session_id`, `checkpoint` | `frame` |
+
+The first three operations are the basic service interface. Checkpoint and restore are needed when the backend advertises snapshot restoration. Reset closes an existing session first.
+
+Encode screenshot bytes as `screenshot_base64` inside the frame. The driver decodes them into `Frame.screenshot`. Other fields use the Frame names. For example:
+
+```json
+{
+  "session_id": "example-session",
+  "frame": {
+    "text": "Ready",
+    "structured": {},
+    "state": {"phase": "ready"},
+    "terminated": false,
+    "truncated": false
+  }
+}
+```
+
+Return the state and observations produced by the requested operation.
+
+## Browser and desktop callbacks
+
+`PlaywrightBrowserBackend` accepts `setup(context, options, seed)` and `state_reader(page)`. The former prepares the context before navigation. The latter returns task state placed under the browser state's `task` key.
+
+`OSWorldServerDriver(endpoint, setup, state_reader, max_steps, settle_seconds=0.7)` uses callbacks `setup(client, options)` and `state_reader(client, options)`. Its client supports command execution and screenshot capture against the configured service. It is separate from the generic HTTPDriver message format.
+
+## Other exported environment types
+
+The `harness.environments` module exports `BrowserEnvironment`, `ComputerUseEnvironment`, and `StructuredEnvironment`; memory and Playwright backends; and `BrowserBackendProtocol`, `ComputerUseBackendProtocol`, `StructuredBackendProtocol`, and `RendererNeutralBackend` for interface definitions.
+
+`BackendHookPoint`, `BackendHookEvent`, and `BackendHook` describe backend events and callback values. `EnvironmentCapability`, `EnvironmentCapabilityError`, `missing_capabilities`, and `require_capabilities` describe and check supported features. `RulePolicyOracle` returns policy decisions for configured denied action kinds.

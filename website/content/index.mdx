@@ -1,0 +1,183 @@
+---
+title: BEHA³VE | Agent behavior experiments
+description: BEHA³VE is a framework for running scalable controlled experiments on AI agent behavior.
+brand: BEHA³VE
+navigation:
+  - label: Documentation
+    href: /docs
+  - label: GitHub
+    href: https://github.com/PapayaResearch/wab
+  - label: ABxLab
+    href: https://abxlab.media.mit.edu/
+---
+
+<section className="landing-splash" aria-labelledby="project-name">
+  <h1 id="project-name"><Logo label="BEHA³VE" animate /></h1>
+</section>
+
+<section className="landing-overview site-container" aria-label="Project introduction">
+
+
+  <div className="landing-quickstart" aria-label="Get started">
+
+## Getting started
+
+<div>
+
+BEHA³VE is set up as a GitHub template. We suggest first creating your own copy (click below) to begin your study.
+
+<div className="text-center  pt-4">
+  <a className="template-button not-prose" href="https://github.com/PapayaResearch/beha3ve/generate" target="_blank" rel="noopener noreferrer">
+    <b>Use this template</b>
+  </a>
+</div>
+
+</div>
+
+Then clone your new repository, replacing `YOUR-USERNAME` and `YOUR-STUDY` below with your newly-created repository:
+
+```bash
+# Install BEHA³VE (with browser support)
+git clone https://github.com/YOUR-USERNAME/YOUR-STUDY.git
+cd YOUR-STUDY
+uv pip install -e ".[browser]"
+```
+
+```bash
+# Install the browser driver
+uv pip install pytest-playwright
+playwright install chromium
+```
+
+```bash
+# Run an agent in a live browser task
+python run.py task=examples/live_wikipedia_research \
+  agent=openai/gpt-5.6-luna
+```
+
+    <nav className="landing-next" aria-label="Get started">
+
+[Documentation](/docs)
+
+[Running a study](/docs/tutorials/running-a-browser-study)
+
+[Adding a benchmark](/docs/tutorials/bringing-your-own-benchmark)
+
+    </nav>
+  </div>
+<div className="landing-introduction">
+
+## **BEHA³VE** is a framework for running large-scale controlled experiments on AI agent behavior.
+
+To assess AI agents' reliability, we need to understand how their behavior depends on the conditions in which they operate.
+
+With BEHA³VE, you can systematically vary these conditions to investigate when agents succeed, why they fail, and how their decisions depend on the circumstances they might encounter. You can also compare agents' behavior across different models and harness design choices, for instance.
+
+To support this, the framework implements several features:
+
+1. A **man-in-the-middle layer** between the agent and environment so you can apply arbitrary modifications to arbitrary environments in a controlled way. This allows you to generate **counterfactual conditions** to examine how they affect the agent's behavior
+
+2. A simple **configuration engine** (implemented using [Hydra](https://hydra.cc/)). You can easily specify the task, agent, environment, interventions, and experimental design in reusable configuration files with command-line overrides and sweeps, without modifying any code
+
+3. A **trajectory viewer** to quickly inspect and compare matched control vs. treatment runs
+
+4. **Comprehensive logging**, including observations, actions, and intervention records, you can reconstruct individual runs for debugging and analysis
+
+This approach builds on our ICLR 2026 work [ABxLab](https://abxlab.media.mit.edu/).
+
+More recently, in our ICML 2026 position paper [Behavioral Systems Require Behavioral Tests](https://proceedings.mlr.press/v306/cherep26b.html), we discuss the philosophy behind this approach and how it can help us understand the behavior of AI agents in a systematic way.
+
+</div>
+</section>
+
+<section className="landing-citation site-container" aria-label="Citation and attribution">
+
+## Citation and attribution
+
+If you find BEHA³VE useful in your research, please cite our ABxLab paper, on which we based this framework:
+
+> *Manuel Cherep, Chengtian Ma, Abigail Xu, Maya Shaked, Pattie Maes, and Nikhil Singh. **A Framework for Studying AI Agent Behavior: Evidence from Consumer Choice Experiments.** ICLR 2026.*
+
+<details>
+<summary>ABxLab BibTeX</summary>
+
+```bibtex
+@inproceedings{cherep2026abxlab,
+  title={A Framework for Studying AI Agent Behavior: Evidence from Consumer Choice Experiments},
+  author={Cherep, Manuel and Ma, Chengtian and Xu, Abigail and Shaked, Maya and Maes, Pattie and Singh, Nikhil},
+  booktitle={The Fourteenth International Conference on Learning Representations},
+  year={2026},
+  url={https://arxiv.org/abs/2509.25609}
+}
+```
+
+</details>
+
+If your work relies on our conceptual argument for studying agent behavior through controlled interventions, please also consider citing our ICML 2026 position paper, <a href="https://proceedings.mlr.press/v306/cherep26b.html" target="_blank" rel="noopener noreferrer">Behavioral Systems Require Behavioral Tests</a>.
+
+> *Manuel Cherep*, *Nikhil Singh*, and *Pattie Maes*. **Position: Behavioral Systems Require Behavioral Tests.** ICML 2026.
+
+<details>
+<summary>Behavioral Tests BibTeX</summary>
+
+```bibtex
+@inproceedings{pmlr-v306-cherep26b,
+  title={Position: Behavioral Systems Require Behavioral Tests},
+  author={Cherep, Manuel and Singh, Nikhil and Maes, Patricia},
+  booktitle={Proceedings of the 43rd International Conference on Machine Learning},
+  pages={169802--169815},
+  year={2026},
+  volume={306},
+  series={Proceedings of Machine Learning Research},
+  publisher={PMLR},
+  url={https://proceedings.mlr.press/v306/cherep26b.html}
+}
+```
+
+</details>
+
+We adapted HTML pruning from BrowserGym and provide an OSWorld integration for desktop experiments. See [source acknowledgments and license notices](/docs/citation) for these contributions, ABxLab, and the website fonts.
+
+</section>
+
+<footer className="landing-footer" role="contentinfo" aria-label="Site footer">
+<div className="site-container">
+<div className="footer-grid">
+<div className="footer-project">
+
+<Logo label="BEHA³VE" />
+
+Behavioral Evaluation of How AI Agents Act in Variable Environments
+
+BEHA³VE is maintained by [Manuel Cherep](https://mcherep.github.io) and [Nikhil Singh](https://nsingh1.host.dartmouth.edu) of [SAHAS Lab](https://sahaslab.com).
+
+</div>
+<div className="footer-links">
+
+### Using BEHA³VE
+
+- [Documentation](/docs)
+- [Example experiments](/docs/reference/example-catalog)
+- [Contribute](/docs/guides/contribute)
+- [GitHub](https://github.com/PapayaResearch/beha3ve)
+
+</div>
+<div className="footer-links">
+
+### Research
+
+- [ABxLab](https://abxlab.media.mit.edu/)
+- [Behavioral Systems Require Behavioral Tests](https://proceedings.mlr.press/v306/cherep26b.html)
+- [Citation and attribution](/docs/citation)
+
+</div>
+</div>
+<div className="footer-bottom">
+
+**BEHA³VE** A framework for running large-scale controlled experiments on AI agent behavior.
+
+<BackToTop>Back to top</BackToTop>
+
+</div>
+</div>
+</footer>

@@ -1,0 +1,158 @@
+---
+title: Commands
+description: How to use the harness commands.
+sources:
+  - pyproject.toml
+  - run.py
+  - inspect_run.py
+  - replay_run.py
+  - harness/trace_viewer.py
+  - harness/integration.py
+  - scripts/generate_experiments.py
+  - scripts/check_documentation.py
+  - scripts/check_documentation_examples.py
+  - integrations/native_desktop/setup.py
+  - integrations/native_desktop/state.py
+  - integrations/native_desktop/report.py
+---
+
+Run harness scripts from the directory containing `run.py`. An editable package installation adds the `view` and `integrate` entry points. Installing the package does not add a `run` command.
+
+## Running an experiment
+
+```bash
+python run.py task=examples/computer_export agent=openai/gpt-5.6-luna
+```
+
+`run.py` uses Hydra rather than argparse. Configuration overrides use `key=value`. `-m` or `--multirun` creates multiple jobs. `--cfg job --resolve` prints the composed job configuration without executing an episode. `--help` lists available configuration groups and overrides.
+
+See [Configuration](./configuration.mdx) for the supported overrides and their meanings.
+
+With Hydra 1.3.2, you can also use these options:
+
+| Option | Meaning |
+|---|---|
+| `--help`, `-h` | Application configuration help |
+| `--hydra-help` | Hydra-specific help |
+| `--version` | Print Hydra's version |
+| `--cfg`, `-c` | Print the selected configuration without running; choose `job` for application settings, `hydra` for Hydra settings, or `all` for both |
+| `--resolve` | Resolve interpolations while printing with `--cfg` |
+| `--package`, `-p` | Select the configuration package to print |
+| `--run`, `-r` | Execute one job; the default mode |
+| `--multirun`, `-m` | Execute a sweep using the configured launcher |
+| `--shell-completion`, `-sc` | Print shell-completion setup instructions |
+| `--config-path`, `-cp` | Replace the configuration path; relative paths are relative to `run.py` |
+| `--config-name`, `-cn` | Replace the configuration name; the harness uses `config` by default |
+| `--config-dir`, `-cd` | Add a directory to the configuration search path |
+| `--experimental-rerun` | Run a previously saved Hydra configuration pickle; this is separate from trajectory replay |
+| `--info`, `-i` | Print `all`, `config`, `defaults`, `defaults-tree`, `plugins`, or `searchpath`; omitted value means `all` |
+
+All argparse commands listed below also accept `--help` or `-h` to print their usage.
+
+An existing nonempty output directory is renamed to the next `NAME.previous-N` before the new run writes artifacts.
+
+## Viewing saved traces
+
+```bash
+view [run_dir] [--host HOST] [--port PORT] [--no-browser]
+```
+
+| Argument | Default | Meaning |
+|---|---|---|
+| `run_dir` | `runs/run` | Episode or parent directory searched recursively |
+| `--host` | `127.0.0.1` | HTTP server bind address |
+| `--port` | `8765` | HTTP server port |
+| `--no-browser` | Off | Start the server without opening the default browser |
+
+The module form is `python -m harness.trace_viewer` with the same arguments. Stop the server with `Ctrl+C`.
+
+## Inspecting saved episodes
+
+```bash
+python inspect_run.py [run_dir] [--json]
+```
+
+`run_dir` defaults to `runs/run`. `--json` prints a JSON array of episode summaries. Without it, the script prints a text summary. The directory must contain an episode manifest or episode manifests one level below it.
+
+## Exporting a replay view
+
+```bash
+python replay_run.py [run_dir] [--step STEP] [--before] [--output PATH] [--no-progress]
+```
+
+| Argument | Default | Meaning |
+|---|---|---|
+| `run_dir` | `runs/run` | Individual episode directory containing `trajectory.jsonl` |
+| `--step` | Last transition | Zero-based saved transition number |
+| `--before` | Off | Pause before the selected action |
+| `--output` | Standard output | JSON destination; parent directories are created |
+| `--no-progress` | Off | Hide trajectory loading progress |
+
+Use this command to export a view of the saved run. To resume execution, you need a separate restoration step.
+
+## Generating an integration
+
+```bash
+integrate new NAME [--kind KIND] [--root PATH] [--url URL] [--endpoint URL]
+```
+
+| Argument | Default | Meaning |
+|---|---|---|
+| `NAME` | Required | Python identifier that does not begin with an underscore |
+| `--kind` | `browser` | `browser`, `computer`, or `custom` |
+| `--root` | Current directory | Directory containing the harness |
+| `--url` | `https://example.com` | Browser address written to `.env` |
+| `--endpoint` | `http://127.0.0.1:8000` | Computer-service address written to `.env` |
+
+Generate a task YAML and, for a custom integration, a Python driver module. Use a new name; existing files cannot be overwritten.
+
+## Checking an integration
+
+```bash
+integrate check TASK [--config-root PATH] [--seed N] [--report PATH]
+```
+
+| Argument | Default | Meaning |
+|---|---|---|
+| `TASK` | Required | Task name below the selected `conf/task/` |
+| `--config-root` | `conf` in current directory | Hydra configuration root |
+| `--seed` | `0` | Environment reset seed |
+| `--report` | `integration-check.json` | JSON report destination |
+
+With `integrate check`, you execute the actions in `task.actions` against the selected environment, which may connect to an external service. We validate the observations and state without making model requests. You can also use these subcommands through `python -m harness.integration`.
+
+## Generating case configurations
+
+```bash
+python scripts/generate_experiments.py [--products PATH_OR_URL] [--limit N] [--task TASK] [--exp-dir PATH]
+```
+
+`--cases` is an alias for `--products`. The default input is the upstream ABxLab `tasks/product_pairs-matched-ratings.csv`. `--limit` defaults to no limit and must be positive when supplied. `--task` defaults to `abxlab/abx_social_proof`. `--exp-dir` defaults to `conf/experiment/generated/abxlab`.
+
+Generate one YAML override per case. Input IDs must be unique and valid for filenames. Existing destinations cause an assertion.
+
+## Checking documentation sources
+
+```bash
+python scripts/check_documentation.py [--docs-root PATH]
+```
+
+`--docs-root` defaults to `website/content/docs` in the checkout. Use this command to check source paths, page navigation, internal links, Python snippet syntax, and reference coverage without importing the harness.
+
+```bash
+python scripts/check_documentation_examples.py [--work-dir PATH]
+```
+
+Use this command to check local environment operations, a generated driver, factorial output, a case sweep, replay export, and output archival in a temporary copy of the harness. Install the `dev,browser` extras and Chromium first. You can specify a new directory with `--work-dir`; otherwise, we create a temporary one. You can find its location in the terminal and the results in `documentation-validation.json`. We do not execute the LLM tutorials, make model requests, or connect to external environments during these checks.
+
+## Native desktop utilities
+
+The native setup and state commands run inside the configured Ubuntu desktop. The integration invokes them; they are not host setup commands.
+
+| Command | Arguments and output |
+|---|---|
+| `python -m integrations.native_desktop.setup` | Required `--config` containing JSON with `root`, `task_kind`, and `nudge`; prepares the harness-owned `Counterfactual` directory and file-manager window |
+| `python -m integrations.native_desktop.state` | Required `--config` containing JSON setup options; prints filesystem hashes, validity, and selected choice |
+| `python -m integrations.native_desktop.report` | Optional positional `root`, default `runs/osworld-native-realistic`; `--output`, default `reports/osworld-native.json`; writes JSON, Markdown, and referenced images |
+
+During setup, we recreate the task's marked working directory on the selected desktop. Use the native task configuration to specify that desktop. For a report, provide existing native runs with the expected saved fields.

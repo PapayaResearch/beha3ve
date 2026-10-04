@@ -1,0 +1,89 @@
+---
+title: Installing and configuring
+description: Install the package and configure model credentials and environment addresses.
+sources:
+  - pyproject.toml
+  - .env.example
+  - conf/config.yaml
+  - run.py
+---
+
+BEHA³VE is available as a GitHub template so you can keep your experiment code and configurations in your own study repository.
+
+## Creating your study repository
+
+On the [BEHA³VE repository](https://github.com/PapayaResearch/wab), select **Use this template → Create a new repository**. Choose an owner and name for your study, then clone the repository you created:
+
+```bash
+git clone https://github.com/YOUR-USERNAME/YOUR-STUDY.git
+cd YOUR-STUDY
+```
+
+Replace `YOUR-USERNAME` and `YOUR-STUDY` with your GitHub owner and repository name. Run the commands in this guide from that directory, which contains `pyproject.toml` and `run.py`.
+
+You will add your study configurations under `conf/` and task-specific Python code under `integrations/`. Commit those files to your study repository as you develop your experiments. Creating a repository from the template gives you an independent copy; later changes to BEHA³VE are not applied to it automatically.
+
+The dependencies you need depend on the environment you plan to use. For a browser task, install the Python package with browser support and Chromium.
+
+## Choosing the package extras
+
+```bash
+conda create -n beha3ve python=3.11 -y
+conda activate beha3ve
+pip install uv
+uv pip install -e ".[dev]"
+```
+
+Python 3.11 or later is required. An editable installation uses the source files in this directory. The `dev` extra installs pytest, Ruff, and pre-commit.
+
+For Playwright websites or the local export dialog:
+
+```bash
+uv pip install -e ".[dev,browser]"
+playwright install chromium
+```
+
+For parallel Hydra sweeps, also install `joblib`:
+
+```bash
+uv pip install -e ".[dev,browser,joblib]"
+```
+
+Set up the environment you intend to use separately. An OSWorld VM and the older OSWorld SDK are not installed with the package. The package also does not install an ABxLab website.
+
+## Configuring credentials
+
+```bash
+cp -n .env.example .env
+```
+
+Add the keys for the provider you will use:
+
+| Setting | Used by |
+|---|---|
+| `OPENAI_API_KEY` | OpenAI model profiles |
+| `ANTHROPIC_API_KEY` | Anthropic model profiles |
+| `GEMINI_API_KEY` | Google model profile |
+| AWS credentials or role and `AWS_REGION_NAME` | Bedrock profile; region defaults to `us-east-1` |
+
+`run.py` loads `.env` beside the script. The integration checker loads `.env` beside its selected configuration root. Keep the file local; it is ignored by Git.
+
+## Configuring environment addresses
+
+| Setting | Meaning |
+|---|---|
+| `WIKIPEDIA_URL` | Base address for the Wikipedia research task; we set `https://en.wikipedia.org` as the example default |
+| `ABXLAB_URL` | Base address of the shopping environment, without a trailing slash |
+| `OSWORLD_ENDPOINT` | Address of the running OSWorld desktop service |
+
+Run the local export dialog with an LLM to check the browser installation and model credentials:
+
+```bash
+python run.py task=examples/computer_export agent=openai/gpt-5.6-luna design=single 'design.conditions=[control]' hydra.run.dir=runs/install-check
+```
+
+You will make a model request, but do not need an application server for this local task. See [Running your first experiment](../tutorials/running-your-first-experiment.mdx) to inspect the response and selected format.
+
+## Keeping package and website setup separate
+
+Develop the website in `website/` using npm. Installing the Python package does not install its web dependencies. See [Contributing changes](./contribute.mdx) for the site development commands and Vercel settings.

@@ -1,0 +1,56 @@
+---
+title: Experimental control
+description: Pair matching, seed behavior, declared invariants, and enforced comparisons.
+sources:
+  - harness/design.py
+  - harness/interventions.py
+  - conf/design/paired.yaml
+  - run.py
+---
+
+In a controlled experiment, you vary a property of the agent or its environment and compare behavior across conditions. You decide which properties to vary and which to keep fixed.
+
+## Experiment pairs
+
+For each repetition, run the same task once in control and once in treatment. Start both runs with matching task settings and data, apart from the intervention you intend to study. For example, use the same products and prices when testing whether a recommendation affects a shopping agent's choice.
+
+Run each condition independently. An agent's actions in treatment may lead it to different pages or an earlier finish. You do not need to force the trajectories to have the same actions or length.
+
+```mermaid
+flowchart LR
+  A(Same task and starting data) --> B(Control)
+  A --> C(⚙ Treatment)
+  B --> D(Compare outcomes)
+  C --> D
+  classDef emphasis fill:var(--selection),stroke:var(--accent),stroke-width:2
+  class C emphasis
+```
+
+## Enforcing consistency
+
+You can configure checks at two points:
+
+- Before comparing runs, check that the task and starting data match. Add case-specific values through `design.pair_on`, such as an identifier for the product pair.
+- When applying an intervention, check that specified fields remain unchanged. For an HTML edit, you could list the response URL and headers under `held_fixed_fields` while allowing the body to change.
+
+Use `task.held_fixed` to document what you intend to keep fixed. We do not enforce those notes as checks; configure matching criteria and `held_fixed_fields` separately.
+
+With the default paired configuration, we also check that the initial states match. We skip this check for interventions applied during setup (`episode_start`), since you may intentionally change the initial state. For those experiments, inspect the setup in each condition and configure the checks appropriate to that change.
+
+## Checking interventions
+
+Set `design.require_intervention_application=true` to stop the run if a configured intervention makes no change. In factorial experiments, we also check that the interventions corresponding to the selected factor levels were applied.
+
+Inspect the edited observation and the saved model request to confirm that the intended content was included. A model may ignore a cue even when you successfully inserted it.
+
+## Comparing trajectories
+
+In the trace viewer, you can inspect control and treatment side by side. With linked navigation, you see the same action number in both runs. The fifth action may involve different pages or decisions in each condition, so unlink navigation when you need to compare different points in the task.
+
+## Environment randomness
+
+If your environment includes random behavior you want to control, you can specify a seed, provided the environment supports it. Do not assume that matching environment seeds will reproduce an API-hosted model's responses. Use repetitions to examine variation across runs.
+
+## Study design
+
+Choose the tasks, cases, repetitions, and outcome measures for your research question. Matching the starting data is one part of that design; you still need to decide which cases to sample and how to analyze repeated observations. See [Measurements and inference](./measurements-and-inference.mdx).

@@ -1,0 +1,84 @@
+---
+title: Intervention hooks and transforms
+description: How to configure and apply interventions.
+sources:
+  - harness/interventions.py
+  - harness/environments/base.py
+  - harness/replay.py
+  - harness/agents.py
+  - harness/transforms/specification.py
+  - harness/transforms/browser.py
+  - harness/transforms/agent.py
+  - harness/transforms/visual.py
+---
+
+A hook is a point in execution where you can apply an intervention, such as before delivering an observation. To use a hook, you need an environment integration that calls it.
+
+## Scope and target values
+
+`InterventionScope` has `environment`, `agent`, and `observer`. `InterventionTarget` has `observation`, `state`, `message`, `affordance`, `observer_view`, and `agent`. `InterventionModality` has `language`, `visual`, and `structured`.
+
+For an agent-scoped spec, set the target to `agent`. Apply it at `agent_build` with the structured modality. An observer-scoped spec must target `observer_view` and use `observer_pause`. Environment scope cannot target agent or observer view. Navigation-response edits target observation or affordance.
+
+Language edits cannot change visual fields. Visual edits are restricted to visual fields. The runtime checks actual changed paths against the function's reported paths and any paths declared in the spec.
+
+## Hook values
+
+| Value | Called by or intended point |
+|---|---|
+| `episode_start` | Adapter reset, before backend setup |
+| `agent_build` | Agent specification edit before construction |
+| `before_turn` | Adapter actor observation before a turn |
+| `message_before_delivery` | Backend message hook, when provided |
+| `before_agent` | Adapter observation before delivery |
+| `after_agent` | Adapter action handling after the agent returns |
+| `action` | Submitted action edit |
+| `before_environment` | Action before backend execution |
+| `after_action` | State value from a backend state event, when provided |
+| `tool_result` | Backend tool-result hook, when provided |
+| `navigation_response` | Browser response before rendering |
+| `observation` | Delivered backend observation |
+| `snapshot` | Snapshot returned by the adapter |
+| `before_commitment` | Adapter actions named `commit` or `finish` |
+| `observer_pause` | Constructed replay observer view |
+
+`before_commitment` is not emitted merely because an action is terminal. A backend action named `DONE` does not match that adapter check.
+
+## InterventionSpec fields
+
+Required fields are `id`, `factor`, `level`, `scope`, `target`, `modality`, `hook`, and `function`.
+
+| Optional field | Default and meaning |
+|---|---|
+| `arguments` | Empty mapping; function keyword arguments |
+| `selector` | Empty mapping; matching context fields |
+| `order` | 0; lower values apply first |
+| `changed_fields` | Empty list; optional allowed changed paths |
+| `held_fixed_fields` | Empty list; paths checked before and after |
+| `max_applications` | `None`; otherwise limits executions |
+| `expected_relation` | `None`; descriptive expected relation |
+| `held_fixed_digest` | `None`; optional expected hash of held-fixed fields |
+
+Paths use dot-separated mapping keys and list indices. Context includes episode, step, environment, agent, task, seed, and metadata. Selectors can match equality, list membership, or string wildcards.
+
+## Function results and saved data
+
+An intervention function receives `(value, context, **arguments)` and returns `InterventionResult(value, changed_fields, metadata)`. We compare the original and edited values and return the edited value with `InterventionApplication` values.
+
+In each application record, we save the factor and level, hook, scope, target, order, function, arguments, selector, seed, changed paths, before and after hashes, optional held-fixed hash, expected relation, and metadata. Reported paths are retained under metadata.
+
+Spec IDs must be unique in a runtime. `reset()` resets per-spec application counts.
+
+## Reusable transforms
+
+| Function | Arguments and behavior |
+|---|---|
+| `harness.transforms.language_edit` | `operations`; checks that operation paths are not visual |
+| `harness.transforms.structured_edit` | `operations`; applies edits to mappings or model values |
+| `harness.transforms.visual_edit` | `operations`, `preserve_geometry=true`; edits visual data and checks image type and dimensions |
+| `harness.transforms.agent_edit` | `operations`, optional `allowed_paths`; restricts agent fields |
+| `harness.transforms.browser.inject_html_banner` | `html`; inserts before the first closing body tag, or prepends when absent |
+
+Operation mappings use `path` and `op`. `set` uses `value`; `replace` uses `old` and `new`; `append` uses `value`; `delete` removes a nested path. An empty path edits the entire value, where the selected operation supports it. Nested parents must exist.
+
+Agent editable roots are `instructions`, `system_prompt`, `memory_policy`, `scaffold`, `config`, and `tools`. Visual transforms accept data, media type, and metadata paths; dimension preservation is checked by default.

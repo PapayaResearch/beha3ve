@@ -43,12 +43,12 @@ If you need to change how the harness works, there are also:
 | `harness/design.py` | Build conditions and factor combinations |
 | `harness/evaluators.py` | Outcome evaluation and paired/factorial numerical summaries |
 | `harness/schema.py` | Shared observation, action, transition, and snapshot fields |
-| `harness/artifacts.py`, `serialization.py` | Saved records, binary artifacts, hashes, and serialization |
+| `harness/artifacts.py`, `harness/serialization.py` | Saved records, binary artifacts, hashes, and serialization |
 | `harness/replay.py`, `replay_run.py` | Read trajectories, mask observer views, and create supported handoff branches |
 | `inspect_run.py` | CLI summaries of saved runs |
 | `harness/trace_viewer.py` | Load saved episodes, group comparisons, and serve the viewer |
 | `harness/viewer/` | Viewer layout, navigation, styles, themes, and help text |
-| `harness/integration.py`, `templates/` | Generated integration files and the model-free integration checker |
+| `harness/integration.py`, `harness/templates/` | Generated integration files and the model-free integration checker |
 | `harness/testing.py`, `tests/` | Scripted agents, fixtures, and checks for your changes |
 | Package `__init__.py` files | Public imports when you expose new reusable components |
 | `.pre-commit-config.yaml`, `.gitignore` | Development checks and exclusion of local/generated files |
@@ -114,9 +114,9 @@ An intervention function receives `(value, context, **arguments)` and returns [`
 
 You should configure the timing based on your research question, e.g. `navigation_response` will edit browser HTML before rendering; `episode_start` can change reset options consumed by a desktop driver; `observation` will change what is delivered to the agent, and `agent_build` will modify its configuration before construction.
 
-## Step 4: Configuration the agent and experimental design
+## Step 4: Configuring the agent and experimental design
 
-Your task file includes the default environment, agent settings, and design. An experiment file is optional; create `conf/experiment/<name>.yaml` with `# @package _global_` and the overrides you need, then select it with `experiment=<name>`. Use `paired` for a control/treatment comparison, `factorial` for combinations of configured factor levels, or `single` for one condition. Set repetitions, seeds, and case matching in the task file. `max_steps: ${task.max_steps}` at the run level inherits the task’s action budget; experiment or CLI overrides can change it. To run control alone, use `design=single design.conditions=[control]`; for treatment alone, use `design=single`.
+Your task file includes the default environment, agent settings, and design. An experiment file is optional; create `conf/experiment/<name>.yaml` with `# @package _global_` and the overrides you need, then select it with `experiment=<name>`. Use `paired` for a control/treatment comparison, `factorial` for combinations of configured factor levels, or `single` for one condition. Set repetitions, seeds, and case matching in the task file. `max_steps: ${task.max_steps}` at the run level inherits the task’s action budget; experiment or CLI overrides can change it. To run control alone, use `design=single 'design.conditions=[control]'`; for treatment alone, use `design=single`.
 
 The agent settings are useful for configuring the model, prompt, tools, observation format, and memory, via `agent.chat_model_args` for model request parameters, `agent.spec.config` for observation and action formatting, and `agent.spec.memory_policy` for history. Shared defaults live in `conf/agent/_shared.yaml`; select a model with `agent=<profile>`. Shared settings will affect both arms, but you can use an `agent_build` intervention when the agent setting itself is intended to be a treatment.
 

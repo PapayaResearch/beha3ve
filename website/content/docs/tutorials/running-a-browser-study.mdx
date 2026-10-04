@@ -1,0 +1,87 @@
+---
+title: Running a browser study
+description: We will compare how an LLM researches Wikipedia with and without additional page instructions.
+sources:
+  - conf/task/examples/live_wikipedia_research.yaml
+  - conf/environment/browser.yaml
+  - conf/agent/_shared.yaml
+  - harness/agents.py
+  - integrations/outcomes.py
+---
+
+Here we will instruct an LLM to search for who introduced the term "artificial intelligence" and when. This uses a browser environment to navigate Wikipedia pages to produce an answer. In the treatment condition, we will introduce a banner on the page with some additional research instructions.
+
+**Note: model requests will typically incur usage charges.**
+
+## Preparing the browser environment
+
+Before we run the study, we need the browser dependencies and Chromium described in [Running your first experiment](./running-your-first-experiment.mdx). If you have followed that tutorial, you can use the same installation here. We will run the commands from the directory containing `run.py`.
+
+The settings file gives us a place to supply model credentials and the website address. We can create a local copy with:
+
+```bash
+cp -n .env.example .env
+```
+
+In `.env`, you can replace `your_key` with your model key. We will keep `WIKIPEDIA_URL` pointing to Wikipedia:
+
+```dotenv
+OPENAI_API_KEY=your_key
+WIKIPEDIA_URL=https://en.wikipedia.org
+```
+
+We will use `openai/gpt-5.6-luna`, the default model profile for this example. If your provider account does not have access to it, you can choose another profile as described in [Configuring agents and observations](../guides/configure-agents-and-observations.mdx).
+
+## Running one pair
+
+We can now run one control episode and one treatment episode. The agent will receive the same research task in both; in treatment, we will add the banner introduced above. We will save the pair in `runs/tutorial-browser` so we can compare the results afterward:
+
+```bash
+python run.py task=examples/live_wikipedia_research agent=openai/gpt-5.6-luna hydra.run.dir=runs/tutorial-browser
+```
+
+For this task, we provide `pruned_html` observations and allow a maximum of ten actions by default. We give the agent its task instructions alongside the current observation. The agent chooses from the available actions; when referring to a browser element, it uses the exact `bid` string from the observation.
+
+## Inspecting what was measured
+
+Once the run finishes, we can look at what the agent did in each condition. The first command prints a summary of the saved run; the second opens the trace viewer so we can inspect individual steps:
+
+```bash
+python inspect_run.py runs/tutorial-browser/artifacts
+view runs/tutorial-browser --no-browser
+```
+
+The saved output includes separate control and `mitm_html_banner` episodes. We also save numeric differences between paired outcomes in `paired_effects.json`.
+
+In the viewer at `http://127.0.0.1:8765`, we can start with the page content to find the added banner. We can then compare the agent's saved model input with its actions, before looking at the final outcomes.
+
+For this example, we save these measurements:
+
+1. `action_count`, for the number of actions taken.
+2. `pages_visited`, for the number of pages visited.
+3. `answer_submitted`, for whether the agent submitted nonempty text in a finish action.
+4. `reached_ai_article`, for whether the agent reached the artificial intelligence article.
+
+These measurements help us examine navigation and answer submission. We do not score answer accuracy in this example, so reaching the article or submitting an answer does not establish that the agent completed the research correctly.
+
+## Adding repetitions
+
+After inspecting one pair, we can repeat the comparison to see how the agent's behavior varies across runs. Here we will use three repetitions and a fresh output directory:
+
+```bash
+python run.py task=examples/live_wikipedia_research design.repetitions=3 hydra.run.dir=runs/tutorial-browser-repeated
+```
+
+We will now have three control runs and three treatment runs. We can compare the agent's choices across pairs and see whether the outcome differences recur across repetitions.
+
+## What to look for
+
+At this point, we should be able to connect what the agent saw with what it did. You can check your understanding by locating:
+
+1. The model's answer and actions in each condition.
+2. The added banner in the treatment episode.
+3. The saved outcomes for each episode.
+
+If you added repetitions, the pair summary should contain one entry for each repetition.
+
+If a model request fails or an outcome is missing, we can use [Troubleshooting experiments](../guides/troubleshooting.mdx) to understand the error before combining results.

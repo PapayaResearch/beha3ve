@@ -1,0 +1,63 @@
+name: Documentation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -el {0}
+
+env:
+  LITELLM_LOCAL_MODEL_COST_MAP: "True"
+  AWS_EC2_METADATA_DISABLED: "true"
+
+jobs:
+  sources:
+    name: Documentation sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: "3.11"
+          activate-environment: beha3ve-docs
+          auto-activate-base: false
+      - run: pip install uv
+      - run: uv pip install PyYAML
+      - run: python scripts/check_documentation.py
+
+  offline-examples:
+    name: Offline experiment examples
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: "3.11"
+          activate-environment: beha3ve-docs
+          auto-activate-base: false
+      - run: pip install uv
+      - run: uv pip install -e ".[dev,browser,joblib]"
+      - run: playwright install --with-deps chromium
+      - run: python scripts/check_documentation_examples.py --work-dir "${{ runner.temp }}/beha3ve-examples"
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: offline-example-results
+          path: |
+            ${{ runner.temp }}/beha3ve-examples/documentation-validation.json
+            ${{ runner.temp }}/beha3ve-examples/tutorial-integration-check.json
+            ${{ runner.temp }}/beha3ve-examples/runs
+          if-no-files-found: ignore
+          retention-days: 14

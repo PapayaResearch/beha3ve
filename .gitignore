@@ -14,3 +14,11 @@ runs/
 !.env.example
 /integrations/abxlab_import.py
 /conf/experiment/generated/
+/website/node_modules/
+/website/.next/
+/website/.source/
+/website/*.tsbuildinfo
+/website/next-env.d.ts
+/website/.vercel/
+/website/.env*
+!/website/.env.example

@@ -1,0 +1,329 @@
+---
+title: Artifacts and schemas
+description: Saved episode data and field definitions.
+sources:
+  - harness/artifacts.py
+  - harness/schema.py
+  - harness/evaluators.py
+  - harness/serialization.py
+  - harness/replay.py
+  - run.py
+---
+
+We save one directory per episode. For multiple conditions, you can find the episode directories under the run's artifacts directory. The resolved schema version defaults to `"1"`.
+
+## Episode files
+
+| File | Contents |
+|---|---|
+| `config.yaml` | Resolved configuration used for the condition |
+| `manifest.json` | Run and episode IDs, hashes, seed, condition, implementation IDs, selected interventions, and metadata |
+| `trajectory.jsonl` | Newline-delimited episode, transition, intervention, and evaluation entries |
+| `interventions.json` | `configured` specs and saved `applications` |
+| `outcomes.json` | Evaluation result, including outcome values, directions, and evidence |
+| `snapshots.json` | `initial` and `final` snapshots |
+| `blobs/` | Content-addressed binary images or other portable binary values |
+
+When you repeat a command-line run, we archive the previous nonempty output directory before saving new files. `ArtifactWriter.write` itself requires an empty or absent directory and does not perform that archival step.
+
+## Trajectory entry types
+
+| `type` | Fields |
+|---|---|
+| `episode` | `episode_id`, `seed`, `initial_snapshot` |
+| `transition` | `episode_id`, `transition` |
+| `intervention` | `episode_id`, `step`, `application` |
+| `evaluation` | `episode_id`, `evaluation`, `final_snapshot` |
+
+The initial episode entry comes first, followed by agent-build intervention details when present. Each transition is followed by its intervention details. The evaluation entry comes last. Interventions also appear inside transitions and in `interventions.json`; do not sum all copies as separate applications.
+
+Steps are zero-based action indices. Before and after snapshots contain state around each action. The first observation can already contain an observation or setup intervention.
+
+## Portable binary values
+
+Image bytes are written to blobs with a hash-based filename. Portable image mappings retain media type and dimensions with an artifact reference and content hash. Replay reads the referenced bytes back from the episode directory.
+
+Keep the directory and its blobs together when moving a run. A snapshot containing an image preserves an observation. The image does not supply enough information to restore an actual application.
+
+An empty visual byte string is stored with `artifact: null` and `sha256: null`. The current replay loader assumes an image artifact path and fails on that empty-image representation. Text-only observations with `visual: null` and nonempty image blobs do not have that issue.
+
+## Pair and factorial summaries
+
+`paired_effects.json` is a mapping from pair ID to paired identity, matching values, hashes, numeric differences, outcome directions, and evidence. Effects are treatment minus control for outcomes that are numeric in both episodes. We treat Boolean values as numeric in these summaries. String choices and missing values remain in episode outcomes but do not get numeric differences.
+
+`factorial_contrasts.json` is a list of descriptive main effects for two-level factors. Each entry contains factor ID, first and second levels, outcome ID, means, second-minus-first difference, direction, and expected relation. Values are averaged over the other factor combinations and repetitions available in that run.
+
+No file estimates interaction effects, standard errors, confidence intervals, or a population effect. Define those in your analysis if your design requires them.
+
+## Field reference
+
+A required field has no default value. With a factory default, each instance has a separate empty mapping or list.
+
+### Event
+
+Defined in `harness/schema.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `sequence` | `int` | Required |
+| `step` | `int` | Required |
+| `kind` | `str` | Required |
+| `actor_id` | `str \| None` | `None` |
+| `payload` | `dict[str, Any]` | Fresh `{}` |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+
+### VisualObservation
+
+Defined in `harness/schema.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `data` | `bytes` | Required |
+| `media_type` | `str` | `"image/png"` |
+| `width` | `int \| None` | `None` |
+| `height` | `int \| None` | `None` |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+
+### Observation
+
+Defined in `harness/schema.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `step` | `int` | Required |
+| `text` | `str \| None` | `None` |
+| `structured` | `dict[str, Any]` | Fresh `{}` |
+| `visual` | `VisualObservation \| None` | `None` |
+| `events` | `list[Event]` | Fresh `[]` |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+
+### Action
+
+Defined in `harness/schema.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `kind` | `str` | Required |
+| `arguments` | `dict[str, Any]` | Fresh `{}` |
+| `text` | `str \| None` | `None` |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+
+### Snapshot
+
+Defined in `harness/schema.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `step` | `int` | Required |
+| `state` | `dict[str, Any]` | Required |
+| `observation` | `Observation \| None` | `None` |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+
+### InterventionApplication
+
+Defined in `harness/schema.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `intervention_id` | `str` | Required |
+| `factor` | `str` | Required |
+| `level` | `str` | Required |
+| `scope` | `str` | Required |
+| `target` | `str` | Required |
+| `modality` | `str` | Required |
+| `hook` | `str` | Required |
+| `order` | `int` | Required |
+| `function` | `str` | Required |
+| `seed` | `int \| None` | `None` |
+| `arguments` | `dict[str, Any]` | Fresh `{}` |
+| `selector` | `dict[str, Any]` | Fresh `{}` |
+| `changed_fields` | `list[str]` | Fresh `[]` |
+| `before_hash` | `str` | Required |
+| `after_hash` | `str` | Required |
+| `held_fixed_hash` | `str \| None` | `None` |
+| `expected_relation` | `str \| None` | `None` |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+
+### PolicyDecision
+
+Defined in `harness/schema.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `allowed` | `bool` | Required |
+| `rule_id` | `str` | Required |
+| `reason` | `str` | `""` |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+
+### Transition
+
+Defined in `harness/schema.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `step` | `int` | Required |
+| `observation` | `Observation \| None` | Required |
+| `action` | `Action` | Required |
+| `next_observation` | `Observation` | Required |
+| `before_snapshot` | `Snapshot` | Required |
+| `after_snapshot` | `Snapshot` | Required |
+| `reward` | `float \| None` | `None` |
+| `terminated` | `bool` | `False` |
+| `truncated` | `bool` | `False` |
+| `info` | `dict[str, Any]` | Fresh `{}` |
+| `interventions` | `list[InterventionApplication]` | Fresh `[]` |
+
+### RunManifest
+
+Defined in `harness/artifacts.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `schema_version` | `str` | `"1"` |
+| `run_id` | `str` | Required |
+| `episode_id` | `str` | Required |
+| `task_id` | `str` | Required |
+| `fixture_version` | `str` | Required |
+| `fixture_hash` | `str` | Required |
+| `canonical_initial_state_hash` | `str` | Required |
+| `final_state_hash` | `str` | Required |
+| `seed` | `int` | Required |
+| `condition_id` | `str` | Required |
+| `pair_id` | `str \| None` | `None` |
+| `environment_id` | `str` | Required |
+| `agent_id` | `str` | Required |
+| `evaluator_id` | `str` | Required |
+| `interventions` | `list[dict[str, Any]]` | Fresh `[]` |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+
+### PairManifest
+
+Defined in `harness/artifacts.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `schema_version` | `str` | `"1"` |
+| `pair_id` | `str` | Required |
+| `task_id` | `str` | Required |
+| `fixture_hash` | `str` | Required |
+| `seed` | `int` | Required |
+| `control_condition_id` | `str` | Required |
+| `treatment_condition_id` | `str` | Required |
+| `control_initial_state_hash` | `str` | Required |
+| `treatment_initial_state_hash` | `str` | Required |
+| `control_intervention_hash` | `str` | Required |
+| `treatment_intervention_hash` | `str` | Required |
+| `held_fixed_fields` | `list[str]` | Fresh `[]` |
+| `effects` | `dict[str, float]` | Fresh `{}` |
+| `outcome_directions` | `dict[str, str]` | Fresh `{}` |
+| `outcome_evidence` | `dict[str, dict[str, list[dict[str, Any]]]]` | Fresh `{}` |
+
+### OutcomeSpec
+
+Defined in `harness/evaluators.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `id` | `str` | Required |
+| `direction` | `str` | `"report"` |
+| `function` | `str \| None` | `None` |
+| `arguments` | `dict[str, Any]` | Fresh `{}` |
+
+### Outcome
+
+Defined in `harness/evaluators.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `id` | `str` | Required |
+| `value` | `Any` | `None` |
+| `direction` | `str` | `"report"` |
+| `evidence` | `list[dict[str, Any]]` | Fresh `[]` |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+
+### EvaluationResult
+
+Defined in `harness/evaluators.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `outcomes` | `list[Outcome]` | Required |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+
+### FactorialContrast
+
+Defined in `harness/evaluators.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `factor` | `str` | Required |
+| `low_level` | `str` | Required |
+| `high_level` | `str` | Required |
+| `outcome_id` | `str` | Required |
+| `low_mean` | `float` | Required |
+| `high_mean` | `float` | Required |
+| `difference` | `float` | Required |
+| `direction` | `str` | Required |
+| `expected_relation` | `str` | Required |
+
+### ObserverView
+
+Defined in `harness/replay.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `parent_episode_id` | `str` | Required |
+| `pause_step` | `int` | Required |
+| `transitions` | `list[Transition]` | Required |
+| `snapshot` | `Snapshot` | Required |
+| `pause_position` | `str` | `"after"` |
+| `metadata` | `dict[str, Any]` | Fresh `{}` |
+| `interventions` | `list[InterventionApplication]` | Fresh `[]` |
+
+### HandoffLineage
+
+Defined in `harness/replay.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `parent_episode_id` | `str` | Required |
+| `parent_pause_step` | `int` | Required |
+| `parent_snapshot_hash` | `str` | Required |
+| `child_episode_id` | `str` | Required |
+
+### HandoffBranch
+
+Defined in `harness/replay.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `observation` | `Observation` | Required |
+| `lineage` | `HandoffLineage` | Required |
+
+### PauseSpec
+
+Defined in `harness/replay.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `id` | `str` | Required |
+| `kind` | `str` | Required |
+| `step` | `int \| None` | `None` |
+| `progress` | `float \| None` | `None` |
+
+### Frame
+
+Defined in `harness/environments/driver.py`.
+
+| Field | Python type | Default |
+|---|---|---|
+| `text` | `str` | `""` |
+| `structured` | `dict[str, Any]` | Fresh `{}` |
+| `screenshot` | `bytes \| None` | `None` |
+| `width` | `int \| None` | `None` |
+| `height` | `int \| None` | `None` |
+| `state` | `dict[str, Any]` | Fresh `{}` |
+| `reward` | `float \| None` | `None` |
+| `terminated` | `bool` | `False` |
+| `truncated` | `bool` | `False` |
+| `info` | `dict[str, Any]` | Fresh `{}` |

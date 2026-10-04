@@ -1,0 +1,72 @@
+---
+title: Defining outcomes
+description: Measure behavior and task results using trajectories and inspected state.
+sources:
+  - harness/evaluators.py
+  - integrations/outcomes.py
+  - integrations/abxlab.py
+  - tests/test_evaluators.py
+---
+
+To compare behavior across conditions, you need a measurement for each run. An outcome function is where you calculate that measurement from the agent's actions or the final environment state. For example, you could measure which option the agent selected, separately from whether it completed the task.
+
+## Adding an outcome function
+
+When defining an outcome function, you have access to the steps in `trajectory` and the final environment `state`. For a choice task, you might read a `selected_option` field from that state:
+
+```python
+from typing import Any
+from collections.abc import Mapping, Sequence
+from harness.evaluators import Outcome
+from harness.schema import Transition
+
+
+def selected_option(
+    trajectory: Sequence[Transition],
+    state: Mapping[str, Any]
+) -> Outcome:
+    option = state["selected_option"]
+    return Outcome(
+        id="selected_option",
+        value=option,
+        evidence=[{"selected_option": option}]
+    )
+```
+
+To use this example, include `selected_option` in your environment's inspected state. Define the field in your environment before using the function.
+
+To use your measurement in an experiment, add the function's import path under `task.outcomes`:
+
+```yaml
+outcomes:
+  - id: selected_option
+    function: integrations.my_outcomes.selected_option
+```
+
+Return a scalar value or an `Outcome`. For a scalar, we use the configured outcome ID. If you return an `Outcome`, keep its ID consistent with your configuration.
+
+Without a function, the evaluator reads `state.outcomes[spec.id]`, using `None` when the key is absent.
+
+## Representing missing values and evidence
+
+If the agent never made a choice, you have a missing measurement, not a measured zero. Return `None` and explain the reason in `evidence` or metadata. We omit that value from numeric comparisons when either member of a pair lacks a numeric measurement.
+
+Include the data you used to calculate the outcome so you can inspect it later. For a shopping choice, this could be the cart contents; for desktop task completion, it could be the resulting files. To count blocked actions, use the saved action history.
+
+## Reusing the included functions
+
+We include functions in `integrations.outcomes` for these measurements:
+
+1. Action count.
+2. Termination.
+3. Pages visited.
+4. Submitted answer.
+5. Reached URL.
+6. Delivered-message count.
+7. Shared sequence length.
+8. Blocked or realized action count.
+9. Pointer distance.
+
+In the ABxLab integration, we measure cart choice, valid choice, target selection, and inspection of both products. In the local export task, we save the selected format and whether the agent selected JPEG.
+
+Read [Measurements and inference](../explanation/measurements-and-inference.mdx) for the interpretation of saved summaries and [Artifacts and schemas](../reference/artifacts-and-schemas.mdx) for the output format.

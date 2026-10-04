@@ -1,0 +1,76 @@
+---
+title: Configuring agents and observations
+description: Choose a model profile, observation format, prompt, and memory settings.
+sources:
+  - harness/agents.py
+  - conf/agent/_shared.yaml
+  - harness/html.py
+  - tests/test_modalities.py
+---
+
+To compare models on the same task, you can change the agent configuration without changing the environment or intervention. Each model profile contains its provider settings. Select a profile through the `agent` argument:
+
+```bash
+python run.py task=examples/live_wikipedia_research agent=anthropic/claude-sonnet-5
+```
+
+We include these model profiles:
+
+1. `openai/gpt-5.6-luna`
+2. `openai/gpt-5.6-terra`
+3. `openai/gpt-5.6-sol`
+4. `anthropic/claude-haiku-4.5`
+5. `anthropic/claude-sonnet-5`
+6. `google/gemini-3.8-flash`
+7. `bedrock/qwen3-vl-235b`
+
+ Provider availability and accepted request parameters depend on your account and service.
+
+## Choosing what the agent receives
+
+| `task.modality` | Model input |
+|---|---|
+| `pruned_html` | HTML with scripts, styles, comments, and presentation attributes removed; action IDs and form values are retained |
+| `accessibility_tree` | The browser accessibility representation |
+| `screenshot` | An image plus task and action context |
+| `text` | Observation text and applicable structured context |
+
+You may want the agent to receive both page structure and visual information. In that case, specify both formats as a list:
+
+```bash
+python run.py task=examples/live_wikipedia_research 'task.modality=[pruned_html,screenshot]'
+```
+
+Observation interventions happen before model input formatting. The saved environment observation can contain more fields than the selected model input. Use the viewer's Agent input indicator and saved model messages to inspect what was sent.
+
+Long pages may exceed the amount of text you want to send per request. You can set the maximum observation length in characters:
+
+```bash
+python run.py task=examples/live_wikipedia_research agent.spec.config.max_observation_chars=16000
+```
+
+The limit applies to the assembled observation text. It does not remove the separately encoded screenshot.
+
+## Changing request settings
+
+We define shared agent settings in `conf/agent/_shared.yaml`. For provider-specific options, use `agent.chat_model_args`. For example, to allow more time for a model response:
+
+```bash
+python run.py task=examples/live_wikipedia_research agent.chat_model_args.timeout=180
+```
+
+`agent.spec.config.json_mode` controls whether the agent requests API-enforced JSON formatting. `structured_actions=true` requests a schema based on the task's allowed actions. The Bedrock profile disables JSON mode and relies on the prompt to request a JSON object.
+
+We parse the model's JSON response into an `Action` and check that its kind is allowed. If the response is invalid, execution stops with an error.
+
+## Changing prompts and memory
+
+By default, we use the task instruction as `agent.spec.instructions`. You can add instructions through `agent.spec.system_prompt` and specify the available actions through `agent.spec.tools`. We include the action descriptions in the prompt, without using provider-side function calls.
+
+`memory_policy.retain_turns` controls recent action history. Shared settings retain six turns. `retain_observations` defaults to zero and can retain previous text observations and assistant responses when set above zero. Previous screenshots are not kept in that text history.
+
+## Using a custom agent
+
+If you need a different prompting or action-selection procedure, you can implement your own agent class. Define `reset(seed)` for initialization and `act(observation)` for choosing an `Action`, then set `agent.spec.scaffold._target_` to the class's Python import path. Use `accepts_spec: true` if your constructor accepts an `AgentSpec` in addition to the configuration arguments; use `false` for configuration arguments alone.
+
+See [Agent and environment interfaces](../reference/agent-and-environment-interfaces.mdx) for signatures. When an agent setting is the treatment, use an `agent_build` intervention as described in [Writing interventions](./write-interventions.mdx).

@@ -1,0 +1,93 @@
+---
+title: Contributing changes
+description: Develop the harness and website. Keep documentation current and prepare a Vercel deployment.
+sources:
+  - pyproject.toml
+  - .pre-commit-config.yaml
+  - .github/workflows/ci.yml
+  - .github/workflows/documentation.yml
+  - website/package.json
+  - website/source.config.ts
+  - website/vercel.json
+---
+
+For a new benchmark, you can usually add the task-specific behavior in `integrations/` and its configuration files. Changes to the shared harness are appropriate when you need execution or data-saving behavior that applies across tasks.
+
+## Checking Python changes
+
+Install the `dev` extra, then run from the directory containing `run.py`:
+
+```bash
+pytest -q
+ruff check harness integrations scripts tests run.py inspect_run.py replay_run.py
+```
+
+To include the Chromium integration test:
+
+```bash
+BROWSER_TEST=1 pytest -q tests/test_browser_integration.py
+```
+
+Keep automated environment checks independent of model providers. To test an LLM, configure model credentials and save its response.
+
+## Running continuous integration
+
+On pushes and pull requests, we run the Python tests on Python 3.11, 3.12, and 3.13, including the Chromium integration test. Separate jobs check Python code with Ruff, run the trace viewer's JavaScript tests, and build and install the Python package. The package check also verifies the installed command-line tools and bundled viewer and integration-generator files.
+
+In the documentation workflow, we check source references, links, navigation, Python snippet syntax, and reference coverage. We also run the offline experiment examples in a temporary directory. These checks do not require model credentials or external environment services.
+
+You can run either workflow manually from GitHub's Actions tab. Test reports, built packages, and offline-example results are available as workflow artifacts for 14 days. Vercel handles website builds and deployment from `website/`; neither workflow builds or tests the website.
+
+## Developing the website
+
+The site is a separate npm project:
+
+```bash
+cd website
+npm ci
+npm run dev
+```
+
+Open the address printed by Next.js. The landing page is `/`, and documentation begins at `/docs/`.
+
+Check the website:
+
+```bash
+npm run typecheck
+npm run build
+npm run start
+```
+
+Keep the server running and use `npm run check:site` to check all routes, links, images, search, and metadata. Alternatively, `npm run check:site -- --start` starts its own production server. Inspect code copying and mobile layouts in the browser. The website does not run the Python harness or need model credentials.
+
+## Updating documentation
+
+Documentation pages are located in `website/content/docs/`. Keep each page's frontmatter title and description accurate; also maintain its `sources` list. Each source path is relative to the directory containing `run.py`. The website links to those files, and the coverage checker verifies they exist.
+
+Choose the page type by its purpose:
+
+1. Use tutorials for a complete example.
+2. Use quick guides for a particular task.
+3. Use reference pages for fields and signatures.
+4. Use concepts pages for experimental design and interpretation.
+
+ Explain why a setting is needed before showing how to configure it. Use literal language and introduce technical terms in context.
+
+Update each folder's `meta.json` when adding or reordering pages. Use relative `.mdx` links beginning with `./` or `../` between pages so Fumadocs resolves them and the sources remain navigable in GitHub. Preserve the explanations and examples in `README.md`, `BYOB.md`, and `EXAMPLES.md`; make targeted corrections when the code changes.
+
+You can also run the documentation CI checks locally from the directory containing `run.py`. They are not required to build or deploy the website:
+
+```bash
+python scripts/check_documentation.py
+python scripts/check_documentation_examples.py
+```
+
+In the example check, we test environment operations in a fresh temporary workspace. Chromium is required. It does not run the LLM tutorials or make model requests. When an interface or saved field changes, update the corresponding reference page and its source list. Preserve existing third-party license notices.
+
+## Preparing Vercel
+
+Import this project into Vercel and set Root Directory to `website`. We configure Vercel to use Next.js. We use `npm ci` to install web dependencies and `npm run build` to build the website. No database or model service is required.
+
+Set `SITE_URL` to the assigned production URL, including `https://`, for canonical metadata and the sitemap. Until it is configured, local and preview builds use their available address. Set a custom domain when you have chosen one.
+
+Actual deployment is a separate action. Do not put Python model keys or the harness `.env` into the website project.

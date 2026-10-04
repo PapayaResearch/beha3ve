@@ -2,6 +2,8 @@
 
 Run all examples from this directory after [installation](README.md#installation). Each task in `conf/task/` includes its intervention and run defaults.
 
+See the [example catalog](website/content/docs/reference/example-catalog.mdx) for the full task list, prerequisites, and outcomes.
+
 ## Browser research
 
 Wikipedia task with and without an HTML banner:

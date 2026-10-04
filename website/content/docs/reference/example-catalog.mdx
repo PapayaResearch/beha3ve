@@ -1,0 +1,127 @@
+---
+title: Example catalog
+description: How to run and interpret the example tasks.
+sources:
+  - conf/task/examples/form_attention.yaml
+  - conf/task/examples/computer_export.yaml
+  - conf/task/examples/live_wikipedia_research.yaml
+  - conf/task/examples/delegation_messages.yaml
+  - conf/task/examples/shared_workspace.yaml
+  - conf/task/examples/policy_boundary.yaml
+  - conf/task/examples/observer_handoff.yaml
+  - conf/task/abxlab/_camera_choice.yaml
+  - conf/task/abxlab/abx_authority.yaml
+  - conf/task/abxlab/abx_social_proof.yaml
+  - conf/task/abxlab/abx_scarcity.yaml
+  - conf/task/abxlab/single_authority.yaml
+  - conf/task/abxlab/factorial_camera.yaml
+  - conf/task/osworld/rename_directory.yaml
+  - conf/task/osworld/osworld_rename_pair.yaml
+  - conf/task/osworld/native_report.yaml
+  - conf/task/osworld/native_archive.yaml
+  - conf/task/osworld/native_default.yaml
+  - conf/task/osworld/native_authority.yaml
+  - conf/task/osworld/native_social.yaml
+---
+
+BEHA³VE comes with example tasks so you can run a complete experiment and get a sense of how it all works before you write your own.
+
+In each example, we give the agent the same task under different conditions and then check what it does. For example, in one task we direct a shopping agent to choose a camera and test whether an expert recommendation on one product changes its choice.
+
+Run an example to check your setup and learn how to write your own task. We group the examples by environment. For each one, we explain the requirements and conditions, then describe its measurements and limits.
+
+Select a task with `python run.py task=GROUP/NAME agent=openai/gpt-5.6-luna` from the directory containing `run.py`. Task names below omit `conf/task/` and `.yaml`. Configure your model credentials before running an experiment.
+
+Start with [Running your first experiment](../tutorials/running-your-first-experiment.mdx) to use the local export dialog. In [Comparing control and treatment](../tutorials/comparing-control-and-treatment.mdx), we add a JPEG recommendation to the screenshot.
+
+## Local environments
+
+In these tasks, we use environments on your machine without an external service, so they are the easiest place to start. In each task, we use a different kind of environment supported by BEHA³VE.
+
+| Task | Environment and design | Measurements and limits |
+|---|---|---|
+| `examples/computer_export` | Local Chromium export dialog, paired recommendation screenshot | We save the selected format and flag whether it is JPEG. We also check whether the export was saved. The LLM receives a screenshot and returns click coordinates. |
+| `examples/form_attention` | Stored form HTML, single control | Action count and termination. In this task, we allow a finish action but do not provide interactive form submission. |
+| `examples/delegation_messages` | Local structured state, single control | Delivered-message count and action count. One actor sends a plan to a coordinator. |
+| `examples/shared_workspace` | Local structured state, single control | Shared sequence length and action count. One actor updates a shared sequence; no participant negotiation is scheduled. |
+| `examples/policy_boundary` | Local structured state with denied deletion, single control | Blocked and realized action count. We measure how the agent handles the configured policy. We do not evaluate general institutional-policy compliance. |
+| `examples/observer_handoff` | Stored computer-use state, single control | Pointer distance and action count. In this task, we support local snapshot restoration. The model receives text; no rendered desktop screenshot is supplied. |
+
+The local tasks with single control conditions contain no treatment specs. Add a treatment if your experiment needs a comparison.
+
+## Research on an external website
+
+In this task, we test whether guidance on a web page changes how an agent browses an external website. To run `examples/live_wikipedia_research`, install Chromium and configure a model account. Set `WIKIPEDIA_URL` to the website address. We run paired episodes and insert an HTML banner at navigation responses. We measure:
+
+1. Action count.
+2. Pages visited.
+3. Whether an answer was submitted.
+4. Whether the AI article was reached.
+
+We do not grade answer accuracy.
+
+```bash
+python run.py task=examples/live_wikipedia_research
+```
+
+## ABxLab shopping tasks
+
+In these tasks, we test whether persuasion cues change what a shopping agent chooses, following [ABxLab](https://abxlab.media.mit.edu/), where the authors studied the same question. In each treatment, we add a cue to one product:
+
+1. An expert recommendation presents authority.
+2. A purchase count presents social proof.
+3. A limited edition label presents scarcity.
+
+To run these tasks, install Chromium, configure model credentials, and host a shopping website at `ABXLAB_URL`. We open two product tabs at setup and measure cart choice, valid choice, target selection, and inspection of both products.
+
+| Task | Conditions and intervention |
+|---|---|
+| `abxlab/abx_authority` | Paired control and authority wording on the target product |
+| `abxlab/abx_social_proof` | Paired control and social-proof cue |
+| `abxlab/abx_scarcity` | Paired control and scarcity cue |
+| `abxlab/single_authority` | Authority treatment alone |
+| `abxlab/factorial_camera` | Four combinations of displayed price and neutral or authority subtitle |
+| `abxlab/_camera_choice` | Shared camera task configuration with control specs; intended as a base for the named tasks |
+
+```bash
+python run.py task=abxlab/abx_authority
+python run.py task=abxlab/factorial_camera
+```
+
+In factorial price treatments, we change the displayed page without updating the checkout database. With one observation per combination, we demonstrate how to run the design; plan repetitions and independent cases for analysis.
+
+## OSWorld service tasks
+
+In these tasks, we test whether similar cues change an agent's choices on a desktop. The agent copies or moves files. In each treatment, we change how one option looks, for example by preselecting a file or renaming a folder.
+
+To run the native tasks, start an Ubuntu desktop service at `OSWORLD_ENDPOINT`, install the configured file-manager tools in the guest, and select a model that accepts screenshots. We check the guest filesystem for completion and target selection and also count actions.
+
+| Task | Conditions and setup |
+|---|---|
+| `osworld/native_report` | Single control; copy one of two draft reports into Selected |
+| `osworld/native_archive` | Single control; move a memo into one of two archive folders |
+| `osworld/native_default` | Paired report task with Draft B preselected in treatment |
+| `osworld/native_authority` | Paired report task with a reviewed filename in treatment |
+| `osworld/native_social` | Paired archive task with a Team archive folder name in treatment |
+
+```bash
+python run.py task=osworld/native_default
+```
+
+During setup, we recreate the task's marked working directory in the guest. We reuse the desktop VM across episodes without restoring a disk snapshot. Filename edits may communicate task information as well as a preference cue. We prepare custom files in an OSWorld desktop for these tasks. We do not calculate official OSWorld benchmark scores.
+
+## OSWorld SDK tasks
+
+In these tasks, we demonstrate how to run an existing benchmark task under BEHA³VE conditions. We use OSWorld's directory renaming task through its SDK.
+
+| Task | Requirements and outcomes |
+|---|---|
+| `osworld/rename_directory` | Base directory-renaming task. Select `environment=osworld`; we use an incompatible browser profile in the task defaults. We report the SDK score when supplied and check rename completion. We also measure F2 use and action count. |
+| `osworld/osworld_rename_pair` | SDK and VM infrastructure. Paired control and an agent-instruction F2 hint, with a rename state reader. |
+
+```bash
+python run.py task=osworld/rename_directory environment=osworld
+python run.py task=osworld/osworld_rename_pair
+```
+
+The SDK environment is external to this package. Review its setup and evaluator before comparing it with the native tasks that use an HTTP service.

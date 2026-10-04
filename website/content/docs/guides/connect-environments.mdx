@@ -1,0 +1,75 @@
+---
+title: Connecting environments
+description: Connect a website, desktop service, SDK, or local structured environment.
+sources:
+  - harness/integration.py
+  - harness/environments/driver.py
+  - harness/environments/browser.py
+  - harness/environments/osworld_server.py
+  - conf/environment/osworld.yaml
+---
+
+To run a task, you need a connection between the agent and the application it will operate. We provide integrations for browsers and desktops; you can also write a Python driver for another environment. Choose the integration for your application:
+
+| Environment | Starting point |
+|---|---|
+| Website | `PlaywrightBrowserBackend` and `BrowserEnvironment` |
+| Running OSWorld service | `OSWorldServerDriver` and the `osworld_server` profile |
+| Another SDK or simulator | A driver with `reset`, `step`, and `close`, adapted by `DriverBackend` |
+| Your HTTP service | `HTTPDriver` |
+| Local actors and shared state | `MemoryStructuredBackend` and `StructuredEnvironment` |
+
+## Generating integration files
+
+Run commands from the directory containing `run.py`:
+
+```bash
+integrate new my_site --kind browser --url https://example.com
+integrate new my_desktop --kind computer --endpoint http://127.0.0.1:8000
+integrate new my_simulator --kind custom
+```
+
+Choose the command for your environment. After generation, you have a task YAML with its environment settings and, for the custom option, a Python driver module. We save browser and desktop service addresses in `.env` so you can change them without editing the task definition.
+
+Names must be Python identifiers and cannot begin with an underscore. The generator refuses to overwrite files.
+
+## Preparing a website
+
+A browser task often needs preparation, such as signing into an account, and a way to measure what happened, such as inspecting a shopping cart. Implement `setup(context, options, seed)` for preparation before navigation and `state_reader(page)` for reading task state after reset and actions. Set `_partial_: true` in YAML when passing these functions as callbacks, so we call them during the run rather than while loading the configuration.
+
+We create a fresh browser context for local session state. You also need to reset any server-side data used by the task, such as a shopping cart or account settings. For concurrent runs, use separate accounts or application instances where necessary.
+
+The browser integration supports:
+
+1. Element-ID actions for interacting with page elements.
+2. Multiple tabs for browsing.
+3. Screenshots for visual observations.
+4. HTML for page-content observations.
+5. Accessibility observations for page structure.
+6. Response interception for changing web responses.
+
+ Its saved snapshots cannot restore application and browser state.
+
+## Preparing a desktop
+
+For desktop tasks, start an OSWorld service and set its address in `OSWORLD_ENDPOINT`. With an `osworld_server` task, we run your setup and state-reading functions against that service. In our native examples, we use an Ubuntu desktop with Nautilus and inspect the guest filesystem to measure completion.
+
+The older `osworld` profile uses the OSWorld SDK through `desktop_env.desktop_env.DesktopEnv`. It requires the SDK and VM infrastructure outside this package. The two profiles have different lifecycle and evaluator behavior.
+
+## Implementing a custom driver
+
+For another application, implement a driver that prepares a task in `reset(seed, options)` and executes actions in `step(action)`. Return a `Frame` after each call with the observation you want to give the agent: text, structured data, or a PNG screenshot with its dimensions. Include measurement data in `state` and indicate whether the task ended through `terminated` or `truncated`. Implement `close()` to release the session.
+
+Configure the allowed actions through `DriverBackend`. If you also want to resume saved runs, implement `checkpoint()` and `restore(checkpoint)` before enabling restoration. You need the application state required to continue execution, which usually includes more than a screenshot.
+
+See [Agent and environment interfaces](../reference/agent-and-environment-interfaces.mdx) for the HTTP message shapes and callback signatures.
+
+## Checking the integration
+
+```bash
+integrate check my_simulator --report my-integration-check.json
+```
+
+With `integrate check`, you reset the configured environment and execute the actions in `task.actions`. We validate the resulting observations and state and test restoration when supported. Prepare the application or service for those actions. No model requests are made during this check.
+
+After a successful check, you have verified the tested action sequence. You still need to inspect the task, intervention, observations, and outcome measurements for your study.

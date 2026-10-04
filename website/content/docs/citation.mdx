@@ -1,0 +1,42 @@
+---
+title: Citation and attribution
+description: Cite our ABxLab work and find source acknowledgments and license notices.
+sources:
+  - docs/abxlab-attribution.md
+  - docs/licenses/browsergym-Apache-2.0.txt
+  - docs/licenses/osworld-Apache-2.0.txt
+  - harness/html.py
+  - pyproject.toml
+  - website/public/licenses/libre-franklin-OFL.txt
+  - website/public/licenses/ibm-plex-mono-OFL.txt
+---
+
+We developed BEHA³VE for the benchmark track of the Workshop on Agent Behavior at COLM 2026, building on our ABxLab shopping experiments and interventions.
+
+## Related paper
+
+If you find BEHA³VE useful in your research, please cite our ABxLab paper:
+
+> Manuel Cherep, Chengtian Ma, Abigail Xu, Maya Shaked, Pattie Maes, and Nikhil Singh. A Framework for Studying AI Agent Behavior: Evidence from Consumer Choice Experiments. ICLR 2026.
+
+```bibtex
+@inproceedings{cherep2026abxlab,
+  title={A Framework for Studying AI Agent Behavior: Evidence from Consumer Choice Experiments},
+  author={Cherep, Manuel and Ma, Chengtian and Xu, Abigail and Shaked, Maya and Maes, Pattie and Singh, Nikhil},
+  booktitle={The Fourteenth International Conference on Learning Representations},
+  year={2026},
+  url={https://arxiv.org/abs/2509.25609}
+}
+```
+
+In this paper, we evaluated agents in shopping environments. BEHA³VE extends that work to additional environments and experimental designs.
+
+## Sources and license notices
+
+We retain the shopping-source license in the [ABxLab attribution notice](https://github.com/PapayaResearch/wab/blob/main/docs/abxlab-attribution.md).
+
+We adapted local HTML pruning from BrowserGym and retain its [Apache 2.0 notice](https://github.com/PapayaResearch/wab/blob/main/docs/licenses/browsergym-Apache-2.0.txt). We also retain the [OSWorld Apache 2.0 notice](https://github.com/PapayaResearch/wab/blob/main/docs/licenses/osworld-Apache-2.0.txt) for our OSWorld integration.
+
+These notices apply to the attributed components. We have not specified a package-wide license for BEHA³VE. Dependencies retain their own license terms.
+
+We use Libre Franklin and IBM Plex Mono through Fontsource and retain both font licenses: [Libre Franklin](https://github.com/PapayaResearch/wab/blob/main/website/public/licenses/libre-franklin-OFL.txt) and [IBM Plex Mono](https://github.com/PapayaResearch/wab/blob/main/website/public/licenses/ibm-plex-mono-OFL.txt).

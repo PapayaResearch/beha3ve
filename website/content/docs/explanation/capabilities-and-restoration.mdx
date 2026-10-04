@@ -1,0 +1,57 @@
+---
+title: Environment support and restoration
+description: Supported environment features, saved snapshots, and requirements for resuming an episode.
+sources:
+  - harness/environments/base.py
+  - harness/environments/browser.py
+  - harness/environments/computer_use.py
+  - harness/environments/structured.py
+  - harness/environments/driver.py
+  - harness/replay.py
+---
+
+Different environments allow different observations and actions. For example, with a browser integration you can inspect HTML and click page elements. With a desktop integration, you may instead work with screenshots, mouse clicks, and keyboard input. Choose an integration that supports the interaction and intervention you want to study.
+
+## Environment requirements
+
+Specify the operations your task needs in `task.required_capabilities`. For example, an intervention that edits a web response before rendering needs `navigation_response`. A task that requires screenshots needs `visual_observation`.
+
+Before starting a run, we check these requirements against the selected environment integration. If an operation is unsupported, choose another integration or implement it in your driver. Adding its name to the configuration does not implement the operation.
+
+See [Connecting environments](../guides/connect-environments.mdx) for browser and desktop integrations, with instructions for adding your own driver.
+
+## Inspecting saved runs
+
+During a run, we save observations and available environment state at each step. We call this saved state a snapshot. You can use them to inspect what happened without making another model request.
+
+The saved data may be enough for inspection but insufficient to resume the task. A screenshot, for example, is not a copy of the application, its open files, and its server-side data.
+
+```mermaid
+flowchart LR
+  A(Inspect a run) --> B(View saved data)
+  C(↻ Resume a run) --> D(Restore checkpoint)
+  D --> E(Continue execution)
+  classDef emphasis fill:var(--selection),stroke:var(--accent),stroke-width:2
+  class D emphasis
+```
+
+## Resuming an experiment
+
+To resume from a saved point, you need a way to restore the environment to its state at that point. For a desktop task, that may require a virtual-machine checkpoint. For a website, you may need both the browser session and the application's stored data.
+
+Restoration support depends on the integration:
+
+| Environment | Can you restore a saved state? |
+|---|---|
+| In-memory environments for browser interaction or computer use; structured environments | Yes, for the state stored by these local implementations. |
+| Playwright browser session | No. You can inspect saved snapshots, but cannot resume the browser session from them. |
+| Included OSWorld service and SDK configurations | No restoration through our driver interfaces. |
+| Custom driver | Yes, if you implement checkpoint creation and restoration. |
+
+For a custom driver, implement `checkpoint()` and `restore(checkpoint)`, then enable restoration in its configuration. Use `integrate check` to check the restored state against the initial state for the configured test sequence. Also test the points at which you intend to resume your study.
+
+## Continuing with another agent
+
+You may want a second agent to continue a task after the first agent stops. Use a saved trajectory to choose the point of handoff, restore the environment if supported, then start the second agent with the restored observation.
+
+You can edit what an observer sees at a saved pause without changing the original saved state. When restoring the environment, we use the original state associated with that pause. You must start the next agent and save its continuation separately. See [Replaying and handing off](../guides/replay-and-handoff.mdx) for the Python API.

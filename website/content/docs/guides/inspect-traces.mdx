@@ -1,0 +1,63 @@
+---
+title: Inspecting traces
+description: Read saved episodes and compare observations, actions, interventions, and outcomes.
+sources:
+  - inspect_run.py
+  - harness/trace_viewer.py
+  - harness/viewer/app.js
+  - harness/viewer/copy.js
+---
+
+After an experiment, you can inspect how an agent reached its result. In the trace viewer, you can read the model inputs and responses alongside the executed actions. For a quick list of conditions and outcomes, use the command-line summary.
+
+## Summarizing saved episodes
+
+```bash
+python inspect_run.py runs/tutorial-pair/artifacts
+python inspect_run.py runs/tutorial-pair/artifacts --json
+```
+
+Pass an episode directory or a directory with episode manifests one level below it to inspect_run.py. In the viewer, you can open a broader sweep directory because we search its subdirectories for episodes.
+
+In the summary, you can find the task, condition, environment, seed, transition count, interventions, and outcomes.
+
+## Opening a viewer
+
+```bash
+view runs/tutorial-pair --host 127.0.0.1 --port 8765 --no-browser
+```
+
+Open `http://127.0.0.1:8765`. Omitting `--no-browser` opens the default browser automatically. You can inspect saved artifacts without making model requests or rerunning the environment.
+
+In the viewer, you can open individual episodes, matched control and treatment pairs, or factorial comparisons that differ in one factor. We match episodes using their recorded task and seed information.
+
+| Tab | Saved content |
+|---|---|
+| Screenshot | Saved visual image, when a blob is present |
+| Rendered | Observation text and the saved HTML body |
+| Raw HTML | Recorded HTML body; a custom text driver may have no HTML |
+| Accessibility tree | Captured accessibility tree |
+| Elements | Captured interactive elements |
+| State | State from the snapshot before the selected action |
+
+For the export dialog, use Screenshot to see the model's observation. For a custom text environment, use Rendered to read the observation text. The viewer indicates when no content was recorded for a tab.
+
+## Finding the actual agent input
+
+When you open the viewer, you first see the Screenshot tab. Look for the Agent input indicator to identify tabs corresponding to the model's input format. A separate Agent input tab appears when a representation, such as pruned HTML, does not match the other tabs.
+
+For model episodes, open Model input and output to inspect the recorded request and response. Provider usage, reasoning content, and latency appear when recorded. Missing usage counts mean that the provider did not report them. Reasoning-token counts can be part of output usage and should not be added again.
+
+Legacy traces may lack modality metadata or contain shortened model messages. Check the trace's age and saved fields before treating a displayed view as a complete request.
+
+## Comparing actions and outcomes
+
+With linked navigation, you inspect the same action number in both episodes. The selected actions can have different meanings or targets. Unlink the episodes when you need to inspect different points. One episode can end before the other.
+
+Inspect intervention fields next to the affected observation. Inspect environment information for returned action errors or state details. The action panel shows what the agent submitted, which can differ from what the environment allowed or performed.
+
+Outcomes are measured after the complete episode, regardless of the selected action. For example, `terminated` is true when an episode ended, while `target_chosen` is true when the agent selected the specified target.
+
+The question-mark controls open explanatory help when clicked. Choose Light or Dark according to your reading preference, or use System to follow your device's theme.
+
+Read [Artifacts and schemas](../reference/artifacts-and-schemas.mdx) when you need the saved data used for a summary.

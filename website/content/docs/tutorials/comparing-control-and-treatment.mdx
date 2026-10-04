@@ -1,0 +1,105 @@
+---
+title: Comparing control and treatment
+description: We will compare an LLM's export choices with and without a JPEG recommendation.
+sources:
+  - conf/task/examples/computer_export.yaml
+  - conf/design/paired.yaml
+  - conf/agent/_shared.yaml
+  - integrations/computer_export.py
+  - harness/trace_viewer.py
+  - run.py
+---
+
+Here we will compare an LLM's choices in two versions of the image export task. In control, we will show the original screenshot without a recommendation. In treatment, we will add a recommendation to choose JPEG. We can then inspect the model's responses and compare the formats it selected.
+
+We will change the screenshot sent to the model while keeping the underlying dialog and button positions unchanged. This lets us introduce the recommendation without changing where the model can click.
+
+**Note: model requests will typically incur usage charges.**
+
+## Preparing the comparison
+
+We will use the same installation and credentials as in [Running your first experiment](./running-your-first-experiment.mdx). If you have not completed that tutorial, we can begin there to install Chromium and configure model credentials. We will run the commands here from the directory containing `run.py`, with your `beha3ve` environment active.
+
+We will make model requests in both conditions. The dialog runs locally, so we do not need an application server.
+
+## Running the pair
+
+We configure this task as a paired experiment, so one command runs both conditions. Before each condition, we reset the dialog. We call each run under one condition an *episode*.
+
+We allow one click and instruct the model to follow a recommendation when present. We will need to inspect the saved results to see what it actually chose. We can start the pair with:
+
+```bash
+python run.py \
+  task=examples/computer_export \
+  agent=openai/gpt-5.6-luna \
+  hydra.run.dir=runs/tutorial-pair
+```
+
+## Finding the results
+
+Once the pair has finished, we can use the command-line summary to locate its outcomes:
+
+```bash
+python inspect_run.py runs/tutorial-pair/artifacts
+```
+
+We save each episode separately, alongside a summary of the pair:
+
+```text
+runs/tutorial-pair/artifacts/
+  control/
+  jpeg_recommendation/
+  paired_effects.json
+```
+
+Each episode directory gives us several ways to inspect what happened:
+
+1. The model response shows what the model returned.
+2. The action shows the click it submitted.
+3. The outcomes describe the selected format and whether a Save-button click was accepted.
+4. The intervention details describe the screenshot edit.
+5. The screenshots let us inspect the dialog.
+
+In `paired_effects.json`, we save the information used to match the episodes and numeric treatment-minus-control differences. We can use this summary after checking the individual episodes.
+
+## Comparing the screenshots and choices
+
+The trace viewer lets us inspect the screenshot alongside the model's response. We can open the saved pair with:
+
+```bash
+view runs/tutorial-pair --no-browser
+```
+
+At `http://127.0.0.1:8765`, you can select the control and treatment comparison. We can start with the screenshot before the click to check what the model received. In treatment, you should see `Recommended format: JPEG`. The saved intervention details should also list `visual.data` as changed.
+
+Next, we can open **Model input and output** for each condition to inspect the returned click coordinates. The `selected_format` outcome tells us which format was selected; `saved` tells us whether the dialog accepted a Save-button click. We instruct the model to choose PNG in control and JPEG in treatment, but it may choose another format or miss both buttons.
+
+For a numeric comparison, we use `jpeg_selected`, which is `true` for JPEG and `false` for PNG. We treat these values as 1 and 0 when subtracting control from treatment. If neither Save button was selected, the value is `null`; we do not calculate a numeric pair difference for this outcome when either value is missing.
+
+The difference compares the choices in this pair. To estimate how often the model follows the recommendation, we will need to repeat the experiment.
+
+## Adding repetitions
+
+We can request three pairs by setting `design.repetitions=3`. Each repetition gives us a control run and a treatment run:
+
+```bash
+python run.py \
+  task=examples/computer_export \
+  agent=openai/gpt-5.6-luna \
+  design.repetitions=3 \
+  hydra.run.dir=runs/tutorial-pair-repeated
+```
+
+After this run, we can compare the selected formats across three control runs and their three treatment runs. Looking across the pairs helps us see whether the choices are consistent across repetitions.
+
+## What we can check
+
+By this point, you should be able to:
+
+1. Find the separate control and treatment episode directories.
+2. Confirm that we added the recommendation to the treatment screenshot.
+3. Compare the model's choices using the saved outcomes.
+
+The saved intervention details confirm the edit. They do not establish that the model noticed or used the recommendation.
+
+Before expanding the study, we can consider how to keep the comparisons interpretable, as described in [Experimental control](../explanation/experimental-control.mdx). In [Running a browser study](./running-a-browser-study.mdx), we will use a website accessed during the run.

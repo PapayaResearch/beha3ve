@@ -1,0 +1,57 @@
+---
+title: Measurements and inference
+description: What outcomes and saved differences establish, and what your analysis must supply.
+sources:
+  - harness/evaluators.py
+  - integrations/outcomes.py
+  - integrations/abxlab.py
+  - integrations/native_desktop/state.py
+  - run.py
+---
+
+You define what to measure through outcome functions. For each run, you can measure task completion, a particular choice, or another property of the agent's behavior using its trajectory and final environment state.
+
+## Behavioral measures
+
+Choose a measurement that corresponds to your research question. In a shopping study, you might measure whether the agent selected the recommended product. In a browser research task, you might measure answer accuracy or the number of pages visited.
+
+Keep task completion separate from other behavior. An agent can select a product without completing a purchase, or submit an answer that is incorrect. Likewise, reaching the end of a run does not mean that the agent succeeded.
+
+In our shopping examples, we inspect the cart to identify the selected product. In our native desktop examples, we inspect files to check task completion. You can write your own functions using the same approach; see [Defining outcomes](../guides/define-outcomes.mdx).
+
+## Average treatment effects
+
+Often, you want to estimate how much an intervention changes behavior on average. Choose an outcome, such as whether the agent selected a recommended option, and compare its average value under treatment with its average value under control.
+
+For paired runs, subtract the control outcome from the treatment outcome in each pair, then average those differences. For example, if agents select the recommended option in 60% of treatment runs and 40% of control runs, the difference is 20 percentage points.
+
+```mermaid
+flowchart LR
+  A(Control outcome) --> C(Treatment − control)
+  B(Treatment outcome) --> C
+  C --> D(Average across pairs)
+  classDef emphasis fill:var(--selection),stroke:var(--accent),stroke-width:2
+  class D emphasis
+```
+
+You can interpret this as an estimate of the **average treatment effect** for the cases you studied when you have isolated the intervention and used a suitable experimental design. Generalizing to other tasks or agents depends on how you sampled your cases.
+
+In `paired_effects.json`, we save the treatment-minus-control difference for each numeric outcome in each pair. We treat Boolean values as 0 and 1. You calculate the average across pairs in your analysis; we do not calculate confidence intervals or significance tests for these differences.
+
+## Factorial experiments
+
+With a factorial design, you can vary several properties together, such as a recommendation's wording and position. To estimate a main effect of wording, compare the average outcome for each wording across the positions you tested.
+
+For factors with two levels, we save those averages and their difference in `factorial_contrasts.json`. We subtract the mean for the first configured level from the mean for the second. We do not calculate interactions or uncertainty estimates. To test whether the effect of wording depends on position, include that interaction in your analysis.
+
+## Missing measurements
+
+Store `None` when you could not obtain a measurement, and retain the reason in the outcome evidence or metadata. Do not treat a missing measurement as zero. For example, an agent that failed before selecting a product has not necessarily rejected the recommended option.
+
+We omit nonnumeric and missing values from numeric pair differences. Inspect the episode outcomes before aggregating results so you can account for unsuccessful runs and missing measurements.
+
+## Analyzing repeated runs
+
+Retain case identifiers when combining results. If you run the same task several times, account for those repeated observations when estimating uncertainty. Report which cases and models you tested, how you measured behavior, and how you handled failed runs.
+
+Use the saved model inputs and actions to investigate unexpected results. Checking an environment integration does not substitute for running the experiment with a model and examining its responses.

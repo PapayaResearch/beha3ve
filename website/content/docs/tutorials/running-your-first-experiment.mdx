@@ -1,0 +1,118 @@
+---
+title: Running your first experiment
+description: We will follow an LLM's PNG export attempt and compare its saved response with the selected format.
+sources:
+  - conf/task/examples/computer_export.yaml
+  - conf/agent/openai/gpt-5.6-luna.yaml
+  - conf/agent/_shared.yaml
+  - conf/environment/computer_export.yaml
+  - integrations/computer_export.py
+  - inspect_run.py
+  - harness/trace_viewer.py
+---
+
+We will begin with a single image export so we can follow an instruction through to the model's action. Here, we instruct an LLM to export an image as PNG. The model receives a screenshot of an export dialog and returns the coordinates of a Save button.
+
+We can then compare the model's response with the selected format. We save the screenshot alongside the response so you can see what the model received. The saved action and selected format let you check what happened after its click.
+
+The dialog runs locally in Chromium, while model requests go to the OpenAI API. In this demonstration, we measure which Save button the model clicks.
+
+**Note: model requests will typically incur usage charges.**
+
+## Preparing the environment
+
+Before we can send the screenshot to the model, we need the browser dependencies and an API key. With the commands below, we can create the `beha3ve` environment and install browser support. You can run them from the directory containing `run.py`; if you have already installed the browser dependencies, you can start with the API key setting.
+
+```bash
+conda create -n beha3ve python=3.11 -y
+conda activate beha3ve
+pip install uv
+uv pip install -e ".[browser]"
+playwright install chromium
+cp -n .env.example .env
+```
+
+The model request needs your OpenAI API key. You can set it in `.env`:
+
+```dotenv
+OPENAI_API_KEY=your_key
+```
+
+We will use the `openai/gpt-5.6-luna` profile for this example. If you want to use another model that accepts images, you can choose a profile as described in [Configuring agents and observations](../guides/configure-agents-and-observations.mdx).
+
+## Running the task
+
+We will run the control condition first. Its screenshot has no recommendation, so we instruct the model to choose PNG and allow one click. This gives us one export attempt to examine before adding a treatment condition.
+
+```bash
+python run.py \
+  task=examples/computer_export \
+  agent=openai/gpt-5.6-luna \
+  design=single \
+  'design.conditions=[control]' \
+  hydra.run.dir=runs/tutorial-local
+```
+
+We use Hydra for YAML configuration and command-line settings. With each `key=value` argument, we select a configuration or override a setting. Here, we use `task` and `agent` to choose the export task and model profile. With the `design` arguments, we run the control condition as a single episode. We choose `runs/tutorial-local` as the output directory with `hydra.run.dir`.
+
+## Inspecting the saved files
+
+Once the run finishes, we will examine its saved output before interpreting the choice:
+
+```bash
+python inspect_run.py runs/tutorial-local/artifacts
+```
+
+The output directory has the following layout:
+
+```text
+runs/tutorial-local/artifacts/
+  config.yaml
+  manifest.json
+  trajectory.jsonl
+  interventions.json
+  outcomes.json
+  snapshots.json
+  blobs/
+```
+
+To understand what ran, we will start with `config.yaml`, which contains the settings used for the run. In `manifest.json`, we save the run details:
+
+1. The task.
+2. The model.
+3. The seed.
+4. The condition.
+
+Next, we will follow the model's action in `trajectory.jsonl`. It contains the model request and response with the saved click. The screenshots are in `blobs/`.
+
+In `outcomes.json`, we can check whether the attempted click produced the requested format. After a click on the PNG Save button, we expect:
+
+1. `selected_format="PNG"`, which identifies PNG as the selected format.
+2. `jpeg_selected=false`, which indicates that PNG was selected instead of JPEG.
+3. `saved=true`, which indicates that the dialog accepted a Save-button click.
+
+A model can return an incorrect click. If neither Save button was selected, we can inspect its response to see which coordinates it returned. In that case, `jpeg_selected` will be `null` because no format was selected.
+
+## Opening the trace viewer
+
+We can read the selected format in the outcomes. To connect that value to the screenshot the model saw, we can open the saved run in the trace viewer:
+
+```bash
+view runs/tutorial-local --no-browser
+```
+
+At `http://127.0.0.1:8765`, you can select the episode and view the screenshot from before the click. **Model input and output** contains the request and response. Comparing the returned coordinates with the clicked button lets us follow how the response was applied. We can then check the saved format to see the outcome of that click.
+
+When you have finished, you can stop the viewer with `Ctrl+C`. Opening a saved run does not make another model request.
+
+## Checking your understanding
+
+You can check your understanding by following the model's response through to the result:
+
+1. Locate the saved files.
+2. Read the model response.
+3. Connect the returned click to the selected format.
+
+If the model did not select a Save button, the trace should show the action it attempted.
+
+Once you can follow this single-run result, we can add a recommendation. In [Comparing control and treatment](./comparing-control-and-treatment.mdx), we will add a JPEG recommendation to the screenshot so we can compare the model's choice across control and treatment.

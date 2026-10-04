@@ -1,0 +1,58 @@
+---
+title: Troubleshooting experiments
+description: Diagnose configuration errors, missing capabilities, unapplied edits, and saved-run discovery.
+sources:
+  - run.py
+  - harness/interventions.py
+  - harness/environments/base.py
+  - harness/integration.py
+  - inspect_run.py
+  - harness/trace_viewer.py
+  - harness/replay.py
+---
+
+When a run fails, the exception and selected configuration are the starting points for diagnosis. We leave errors visible so you can distinguish a configuration problem from a failed model request or environment operation.
+
+## Installation and configuration
+
+| Symptom | Check |
+|---|---|
+| `view` or `integrate` is unavailable | Activate the environment in which you installed the package and run the editable installation |
+| A task cannot be found | Run from the directory containing `run.py` and use the path below `conf/task/` without `.yaml` |
+| A missing environment variable is reported | Add the service address to `.env` beside `run.py`, or export it in the current shell |
+| Playwright cannot find Chromium | Install the `browser` extra and run `playwright install chromium` in the active environment |
+| Model authentication or model-name error | Confirm that your account has access to the selected model profile; check your provider credentials |
+
+Use Hydra's configuration output to review composed settings without running an episode:
+
+```bash
+python run.py task=examples/computer_export agent=openai/gpt-5.6-luna --cfg job --resolve
+```
+
+## Missing environment features
+
+A capability error lists features required by the task but absent from the environment. Choose a compatible profile or implement the feature before advertising it.
+
+In `osworld/rename_directory`, we define a base task and use the browser profile by default. Select `environment=osworld` for SDK use, or use `osworld/osworld_rename_pair`, where we configure the desktop setup. The base task alone is not a working browser example.
+
+## Interventions that do not apply
+
+Check the hook, selector, factor level, and application limit. Verify that the backend emits the selected hook. A URL selector must match the actual observed URL.
+
+When `require_intervention_application` fails, inspect whether the function actually changed a field. A matching spec can execute without changing a value. An append or replacement operation also needs a field and value with the expected type.
+
+If a held-fixed assertion fails, review both the declared paths and the actual change. Do not disable the assertion to make an unintended edit appear valid.
+
+## Outcomes and saved files
+
+| Symptom | Check |
+|---|---|
+| Pair summary has no difference for an outcome | Pair differences include numeric values shared by both episodes; strings and missing values are excluded |
+| Replay cannot find transitions | Pass an individual episode directory containing `trajectory.jsonl` |
+| Replay raises a path `TypeError` for `None` | The current loader cannot read empty visual fields saved as `artifact: null`. Use an episode with saved images or a text-only integration |
+| CLI inspection cannot find a manifest | Pass the artifacts directory containing a manifest or episode manifests one level below it |
+| Viewer cannot find episodes | Pass a directory containing saved manifests; the viewer searches recursively |
+| Saved directory moved after a rerun | Look for `artifacts.previous-N`, which preserves the prior nonempty output |
+| Restoration fails | Check actual backend restoration support and snapshot backend identity |
+
+Inspect the full `outcomes.json` before treating a missing summary entry as zero. Configure the required model credentials or environment service before retrying a failed connection.

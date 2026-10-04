@@ -1,0 +1,125 @@
+---
+title: Running multi-actor experiments
+description: Give two LLMs separate turns and compare their saved actions in a shared environment.
+sources:
+  - harness/runner.py
+  - harness/agents.py
+  - harness/environments/structured.py
+  - tests/test_environments.py
+  - run.py
+---
+
+To study collaboration or delegation, you may need several agents to act in the same environment. You can specify their turns through `ScheduledEpisodeRunner` in Python. With the standard `run.py` command, you run one agent per episode, even when the task state includes several named actors.
+
+## Defining the models and turns
+
+An actor is a named participant in the environment state. A `Turn` specifies which actor is acting and which agent receives the observation. Give each participant a separate agent instance to keep their model histories separate.
+
+In this example, we instruct a writer agent to store an answer in shared state. A reviewer reads the answer and submits a review. Each participant gets one turn and makes a model request.
+
+Set `OPENAI_API_KEY` in `.env` as described in [Installing and configuring](./install-and-configure.mdx). Save the script as `run_team.py` in the repository directory:
+
+```python
+import argparse
+from dotenv import load_dotenv
+from harness import AgentSpec, LiteLLMAgent, OutcomeEvaluator, ScheduledEpisodeRunner, Turn
+from harness.environments import MemoryStructuredBackend, StructuredEnvironment
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", default="openai/gpt-5.6-luna")
+    args = parser.parse_args()
+    load_dotenv()
+    environment = StructuredEnvironment(MemoryStructuredBackend(), actor_id="writer")
+    model = {"model": args.model}
+    participants = {
+        "writer": LiteLLMAgent(
+            spec=AgentSpec(
+                id="writer",
+                instructions="Write two sentences about PNG images. Store them as the answer in shared state.",
+                tools=[{
+                    "kind": "set_shared_state",
+                    "description": "Set arguments.values.answer to your answer text.",
+                    "arguments": {"values": "object"}
+                }]
+            ),
+            chat_model_args=model,
+            modality="text"
+        ),
+        "reviewer": LiteLLMAgent(
+            spec=AgentSpec(
+                id="reviewer",
+                instructions="Read the shared answer. Return finish with your review in the action's text field.",
+                tools=[{
+                    "kind": "finish",
+                    "description": "Finish with your review in the text field.",
+                    "arguments": {}
+                }]
+            ),
+            chat_model_args=model,
+            modality="text"
+        )
+    }
+    runner = ScheduledEpisodeRunner(
+        environment=environment,
+        participants=participants,
+        turns=[
+            Turn(actor_id="writer", participant_id="writer"),
+            Turn(actor_id="reviewer", participant_id="reviewer")
+        ],
+        evaluator=OutcomeEvaluator([])
+    )
+    result = runner.run(
+        episode_id="model-team",
+        options={
+            "state": {
+                "actors": {
+                    "writer": {"state": {}, "messages": []},
+                    "reviewer": {"state": {}, "messages": []}
+                },
+                "shared": {},
+                "provenance": [],
+                "terminated": False,
+                "truncated": False
+            }
+        }
+    )
+    print(result.final_snapshot.state["shared"])
+    print(result.trajectory[-1].action.text)
+    environment.close()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Run it with the active `beha3ve` environment:
+
+```bash
+python run_team.py
+```
+
+After execution, you can read the shared answer and the last action's text in the terminal. Read the saved model responses if either participant returns an unexpected action. The environment runs locally, while the model requests incur provider charges.
+
+## Reading the turn behavior
+
+We reset the agents and environment before each episode. On each turn, we obtain an observation for the selected actor and request an action from that agent. We attach the actor ID to the action metadata before execution.
+
+Execution stops at environment termination or after the last configured turn. Reaching the end of the turn list does not automatically mark the episode truncated. Use the trajectory length to count executed actions; `turn_count` is the configured number of turns.
+
+## Adding messages and policy checks
+
+Structured state contains each actor's messages and state, plus shared values and saved actions. The environment can deliver messages and check whether an action is allowed. For those operations, we define starting state and available actions in these tasks:
+
+1. `examples/delegation_messages`
+2. `examples/shared_workspace`
+3. `examples/policy_boundary`
+
+ The standard runner uses one agent for those tasks.
+
+Define outcomes for delivered messages, changes to shared state, and allowed or blocked actions. To compare conditions with a schedule, run and save each condition through the Python API.
+
+## Saving the results
+
+After scheduled execution, you receive an `EpisodeResult`. Save the output files separately. Use `ArtifactWriter` with a corresponding `RunManifest` to save the same files as command-line runs. See [Public Python API](../reference/public-python-api.mdx) and [Artifacts and schemas](../reference/artifacts-and-schemas.mdx).

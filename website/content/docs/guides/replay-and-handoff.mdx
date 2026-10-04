@@ -1,0 +1,53 @@
+---
+title: Replaying and handing off
+description: Construct observer pause views and restore supported environments from saved snapshots.
+sources:
+  - replay_run.py
+  - harness/replay.py
+  - conf/task/examples/observer_handoff.yaml
+  - tests/test_replay.py
+---
+
+You may want to show an observer what an agent saw at a particular step or let another agent continue the task. For inspection, you can create a view of the saved trajectory at that step. To continue execution, you also need to restore the environment using an integration with restoration support.
+
+## Saving a pause view
+
+Complete [Comparing control and treatment](../tutorials/comparing-control-and-treatment.mdx), then select an individual episode's artifacts directory:
+
+```bash
+python replay_run.py runs/tutorial-pair/artifacts/control --step 0 --output runs/local-pause.json
+python replay_run.py runs/tutorial-pair/artifacts/control --step 0 --before --output runs/local-before.json
+```
+
+Steps are zero-based transition numbers. Without `--before`, the view includes transitions through the selected action and uses its after-snapshot. With `--before`, it includes earlier transitions and uses the selected action's before-snapshot.
+
+Without `--step`, you get a view of the last transition. Without `--output`, you get JSON in the terminal. You can hide loading progress with `--no-progress`.
+
+We do not support replay of visual fields stored as `artifact: null`. Use an export-dialog episode with saved images or a text-only custom integration for replay.
+
+## Constructing observer views in Python
+
+```python
+from harness import PauseSpec, TrajectoryReplay
+
+replay = TrajectoryReplay.from_event_log("runs/tutorial-pair/artifacts/control/trajectory.jsonl")
+views = replay.materialize_pauses(
+    [PauseSpec(id="initial", kind="step", step=0)]
+)
+```
+
+Supported pause kinds are `step`, `progress`, and `before_commitment`. Progress is a fraction from zero to one mapped to an ordinal transition. It does not measure task completion. `before_commitment` finds the first `commit` or `finish` action. Tasks using another action name, such as `DONE`, need an explicit step.
+
+We omit internal environment state, policy decisions, and transition details from the observer's view before applying `observer_pause` interventions. Observations and relevant trace content remain visible. Inspect custom observation fields for information you do not intend to show the observer.
+
+## Restoring a supported environment
+
+Use `TrajectoryReplay.restore_handoff(view, environment, child_episode_id)` after resetting an environment whose backend supports the snapshot. The method restores the canonical snapshot associated with the pause, even if an observer intervention changed the displayed view.
+
+The returned `HandoffBranch` contains the restored observation and lineage fields identifying the parent episode, pause step, snapshot hash, and child episode. Start the next agent and save its run separately.
+
+Memory browser, computer-use, and structured backends support their own snapshot restoration. You can inspect saved Playwright browser observations, but cannot use them to resume the browser session and application. A custom driver requires checkpoint and restoration methods.
+
+## Validating a handoff study
+
+Confirm the restored state and observation, define who takes control next, and save the continuation with lineage. An observer view is not itself a portable execution checkpoint. Read [Environment support and restoration](../explanation/capabilities-and-restoration.mdx) before adding restoration to a new backend.

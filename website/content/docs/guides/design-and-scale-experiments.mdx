@@ -1,0 +1,96 @@
+---
+title: Designing and scaling experiments
+description: Configure conditions, repetitions, case generation, and Hydra sweeps.
+sources:
+  - harness/design.py
+  - conf/design/single.yaml
+  - conf/design/paired.yaml
+  - conf/design/factorial.yaml
+  - scripts/generate_experiments.py
+  - run.py
+---
+
+You may want to repeat a comparison, test several intervention settings, or run the same study on more cases. Configure the conditions and repetitions in the task file, then use command-line overrides to vary those settings for a particular experiment.
+
+## Selecting conditions and repetitions
+
+| Design | Behavior |
+|---|---|
+| `single` | Runs one selected condition |
+| `paired` | Runs the configured control and treatment conditions for each repetition |
+| `factorial` | Runs combinations of the task's factor levels |
+
+Run one control episode:
+
+```bash
+python run.py task=examples/computer_export agent=openai/gpt-5.6-luna \
+  design=single 'design.conditions=[control]'
+```
+
+Run three control and treatment pairs:
+
+```bash
+python run.py task=examples/computer_export agent=openai/gpt-5.6-luna \
+  design.repetitions=3
+```
+
+With three repetitions, you get three control runs and three treatment runs. If your environment includes stochastic behavior you want to control, you can also specify a seed, provided the environment supports it.
+
+You will make model requests in both examples. See [Comparing control and treatment](../tutorials/comparing-control-and-treatment.mdx) for installation steps and credential settings. It also explains where to find saved files.
+
+Conditions in one run execute serially. Parallelism comes from separate Hydra jobs.
+
+## Configuring a factorial task
+
+To study properties such as price and recommendation wording together, use a factorial design. List the properties and their possible values under `task.factors`, then define an intervention for each factor level using matching `factor` and `level` values. With `design=factorial`, we run their combinations and check that the corresponding edits were applied.
+
+In `abxlab/factorial_camera`, we vary displayed price and neutral versus authority subtitles. To run it, you need the ABxLab website and model credentials.
+
+In `factorial_contrasts.json`, we save average differences for factors with two levels. You can run factors with more levels, but must calculate those comparisons in your analysis. We do not calculate interactions or uncertainty estimates.
+
+## Generating case overrides
+
+Provide a CSV with an `id` column and dotted configuration paths:
+
+```csv
+id,task.instruction
+case_a,Export the image as PNG.
+case_b,Export the image as JPEG.
+```
+
+Generate overrides from a local file:
+
+```bash
+python scripts/generate_experiments.py --cases cases.csv --task examples/computer_export --exp-dir conf/experiment/generated/my_cases
+```
+
+For ABxLab cases, you can supply `product1_url` and `product2_url` columns. Specify your CSV with `--cases`; otherwise, we download the ABxLab matched-rating product-pair CSV. Use unique IDs containing letters, digits, underscores, or hyphens, and choose an output location without existing case files.
+
+## Running a sweep
+
+To compare models without issuing a separate command for each one, use Hydra's `-m` flag and list their configurations:
+
+```bash
+python run.py -m task=examples/computer_export \
+  agent=openai/gpt-5.6-luna,openai/gpt-5.6-sol design.repetitions=3
+```
+
+For generated cases:
+
+```bash
+python run.py -m '+experiment/generated/my_cases=glob(*)' agent=openai/gpt-5.6-luna design.repetitions=3
+```
+
+You can run these model jobs concurrently with the Joblib launcher. After installing the `joblib` extra:
+
+```bash
+python run.py -m task=examples/computer_export \
+  agent=openai/gpt-5.6-luna,openai/gpt-5.6-sol design.repetitions=3 \
+  hydra/launcher=joblib hydra.launcher.n_jobs=2
+```
+
+Each job must have independent application state when the environment is shared. A single desktop VM cannot serve independent concurrent episodes without additional isolation. Use separate service instances or run those jobs serially.
+
+## Preserving matching information
+
+When you run many cases, you need to associate each treatment run with the corresponding control. Include your case identifier in `design.pair_on`. If you change setup or scoring, update `task.fixture_version` so you can distinguish results produced under different task definitions. See [Experimental control](../explanation/experimental-control.mdx) for the matching checks.

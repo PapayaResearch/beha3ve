@@ -1,0 +1,94 @@
+---
+title: Writing interventions
+description: Specify the intervention and its timing; require selected fields to stay fixed.
+sources:
+  - harness/interventions.py
+  - harness/transforms/language.py
+  - harness/environments/base.py
+  - tests/test_interventions.py
+---
+
+An intervention is the modification you want to study, such as adding a recommendation to a page or changing the instructions given to an agent. To configure it, you specify what to modify, when to apply the modification, and the function that performs it. You can use one of our built-in functions or write your own.
+
+## Adding an observation edit
+
+Suppose you want to add a reminder to the agent's first observation. You can use the built-in `language_edit` function to append text, so you do not need to write Python for this experiment. Add the following under `task:` in your task configuration:
+
+```yaml
+intervention:
+  id: observation_notice
+  specs:
+    - id: initial-notice
+      factor: notice
+      level: present
+      scope: environment
+      target: observation
+      modality: language
+      hook: observation
+      function: harness.transforms.language_edit
+      arguments:
+        operations:
+          - path: text
+            op: append
+            value: " Read the instructions carefully."
+      selector:
+        step: 0
+      order: 0
+      max_applications: 1
+      held_fixed_fields:
+        - structured
+```
+
+Here, `target: observation` and `modality: language` specify that you are editing observation text. Under `arguments`, you give the operation and the text to append. With `selector.step: 0`, you apply the reminder to the initial observation, and with `held_fixed_fields`, you require the structured data to remain unchanged.
+
+The `specs` list allows several interventions in one condition; in this example, we configure one. With `design=paired`, you run control without the reminder and treatment with it.
+
+## Choosing the timing
+
+The right intervention point depends on what you want to modify. To alter a web page itself, edit its HTML before rendering. To alter the image delivered to a model while leaving the page unchanged, edit the screenshot observation instead.
+
+You select that point with `hook`:
+
+| To modify | Use |
+|---|---|
+| Starting options before environment setup | `episode_start` |
+| A web response before rendering | `navigation_response` |
+| An observation before delivery to the agent | `observation` |
+| Agent instructions or settings before initialization | `agent_build` |
+| The information shown to an observer at a saved pause | `observer_pause` |
+
+See [Intervention hooks and transforms](../reference/intervention-hooks-and-transforms.mdx) for the supported intervention points and settings. Use a hook implemented by your environment integration.
+
+## Writing a custom function
+
+When a built-in edit is insufficient, you can implement the transformation in Python. You receive the value being edited and information about the current step. Return the modified value and the fields you changed. For example, the reminder above could be implemented as:
+
+```python
+from harness.interventions import InterventionContext, InterventionResult
+from harness.schema import Observation
+
+
+def add_notice(
+    value: Observation,
+    context: InterventionContext,
+    notice: str = "Read the instructions carefully."
+) -> InterventionResult:
+    edited = value.model_copy(update={"text": "%s %s" % (value.text, notice)})
+    return InterventionResult(value=edited, changed_fields=["text"])
+```
+
+If you save this function in `integrations/reminder.py`, you can select it with `function: integrations.reminder.add_notice` and supply `notice` under `arguments`. We pass those configured arguments to your function after `value` and `context`.
+
+We compare the original and edited values to check that your reported changes are accurate and that fields you intended to keep fixed are unchanged. If the edit violates these restrictions, execution stops with an assertion.
+
+## Restricting application
+
+You may want a reminder on a particular page or at the first step, rather than throughout the task. Use `selector` to specify those circumstances. You can select by episode, step, environment, agent, task, or metadata such as URL. Use a wildcard string for a URL pattern or a list of acceptable values; other values are compared for equality.
+
+If you apply several edits to the same value, set their relative order with `order`; lower values run first. To limit how often you apply an edit within a run, set `max_applications`. An application counts toward this limit even if the value remains unchanged.
+
+With `held_fixed_fields`, you check specific fields of the value being edited. You can also document your study assumptions under `task.held_fixed`, but we do not enforce those notes. If a treatment would be invalid without a changed value, set `design.require_intervention_application=true` to stop execution when no change occurs.
+
+## Inspecting the delivered result
+
+After the run, you can find the applied changes in `interventions.json`. Inspect the corresponding observation and model request to see whether the intended content reached the model. To investigate whether the agent responded to the cue, compare its actions and outcomes across conditions.

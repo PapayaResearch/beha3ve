@@ -1,0 +1,116 @@
+---
+title: Public Python API
+description: Objects exported by harness and the methods used to extend or operate the package.
+sources:
+  - harness/__init__.py
+  - harness/agents.py
+  - harness/runner.py
+  - harness/design.py
+  - harness/interventions.py
+  - harness/evaluators.py
+  - harness/artifacts.py
+  - harness/replay.py
+  - harness/trace_viewer.py
+---
+
+Import the types and functions listed here from `harness`. Import environment implementations from `harness.environments`; import driver implementations from `harness.environments.driver`.
+
+| Exported function | Purpose |
+|---|---|
+| `build_agent` | Construct the agent selected by an `AgentSpec` |
+| `edit_agent_spec` | Apply configured edits before constructing the agent |
+| `materialize_design` | Create the conditions and repetition assignments |
+| `factorial_main_effects` | Compute descriptive differences for two-level factors |
+| `load_trace_bundle` | Read episodes and comparisons for the viewer |
+
+## Observation and action types
+
+| Export | Purpose |
+|---|---|
+| `Action` | Submitted action kind, arguments, text, and metadata |
+| `Observation` | Step, text, structured fields, image, events, and metadata |
+| `VisualObservation` | Image bytes, media type, dimensions, and metadata |
+| `Snapshot` | State and observation at a step |
+| `Transition` | Action with before and after observations, snapshots, flags, and interventions |
+| `Event` | Ordered backend event with optional actor and payload |
+| `PolicyDecision` | Allowed flag, rule ID, reason, and metadata |
+| `InterventionApplication` | Recorded edit, changed fields, hashes, and context |
+
+See [Artifacts and schemas](./artifacts-and-schemas.mdx) for field types and defaults.
+
+## Agents and execution
+
+| Export | Purpose and supported methods |
+|---|---|
+| `Agent` | Interface with `reset(seed)` and `act(observation)` |
+| `AgentSpec` | Agent ID, instructions, system prompt, tools, memory, construction, and configuration |
+| `LiteLLMAgent` | Model-backed implementation with `reset` and `act` |
+| `Environment` | Episode environment interface |
+| `EpisodeResult` | Initial and final snapshots, trajectory, evaluation, and metadata |
+| `EpisodeRunner` | `run(episode_id, seed=0, options=None)` for one agent with an action budget |
+| `ScheduledEpisodeRunner` | `run(episode_id, seed=0, options=None)` for configured participant turns |
+| `Turn` | Actor ID and participant ID for a scheduled turn |
+| `RulePolicyOracle` | Policy decision function for configured denied action kinds |
+
+`EpisodeRunner` takes an environment, agent, evaluator, `max_steps=50`, and `progress=true`. `ScheduledEpisodeRunner` takes an environment, participant mapping, turn list, evaluator, and `progress=true`. Both return an `EpisodeResult`; neither writes artifacts automatically.
+
+`build_agent(spec)` instantiates the configured agent. `edit_agent_spec(spec, runtime, episode_id, task_id, seed=None, condition=None)` returns the edited specification and application details before construction.
+
+## Designing and intervention runtime
+
+| Export | Purpose |
+|---|---|
+| `Factor` | Factor ID, levels, and expected relation |
+| `Condition` | Condition ID, intervention ID, factor assignments, expected relations, and repetition index |
+| `InterventionScope` | Environment, agent, or observer scope |
+| `InterventionTarget` | Observation, state, message, affordance, observer view, or agent |
+| `InterventionModality` | Language, visual, or structured edit |
+| `InterventionHook` | Runtime application point |
+| `InterventionContext` | Episode, step, environment, agent, task, seed, and metadata |
+| `InterventionResult` | Edited value, reported changed fields, and metadata |
+| `InterventionSpec` | Configured intervention definition |
+| `CounterfactualRuntime` | Ordered application of matching specs |
+
+`materialize_design(kind, intervention_id, factors=(), explicit_conditions=(), repetitions=1, shuffle=false, seed=0)` returns `Condition` objects. `kind` is single, paired, or factorial. Factorial designs require factors. Condition IDs cannot contain path separators or equal `.` or `..`.
+
+`CounterfactualRuntime(specs=(), registry=None)` accepts specs and an optional function registry. `apply(hook, value, context)` returns `(edited_value, application_records)`. `reset()` resets application counts.
+
+## Evaluation
+
+| Export | Purpose |
+|---|---|
+| `OutcomeSpec` | Outcome ID, direction, optional function, and arguments |
+| `Outcome` | Measured value, direction, evidence, and metadata |
+| `EvaluationResult` | Outcome list and metadata; `by_id()` returns an ID mapping |
+| `OutcomeEvaluator` | `evaluate(trajectory, state)` evaluates configured outcomes |
+| `FactorialContrast` | Low and high levels, means, difference, direction, and expected relation |
+
+`factorial_main_effects(evaluations, factors)` expects assignment/evaluation pairs and two-level factors. It returns descriptive `FactorialContrast` values. `paired_effects` is available from `harness.evaluators`, and is not exported by the package root.
+
+## Saved data and viewer
+
+| Export | Purpose and supported methods |
+|---|---|
+| `RunManifest` | Identity, hashes, seed, condition, implementation IDs, and metadata |
+| `PairManifest` | Paired identities, hashes, differences, directions, and evidence |
+| `ArtifactWriter` | `write(config, manifest, result)` and `store_blob(data, extension)` |
+
+`ArtifactWriter(output_dir)` requires an absent or empty output directory for `write`. `store_blob` returns the blob's relative path, using a content hash in the filename.
+
+`load_trace_bundle(run_dir)` returns the episodes and comparisons used by the trace viewer. It reads saved artifacts without running an environment or agent.
+
+## Replaying and handoff
+
+| Export | Purpose |
+|---|---|
+| `ObserverView` | Masked view at a pause, including position and observer interventions |
+| `PauseSpec` | Pause ID, kind, optional step, and progress fraction |
+| `HandoffLineage` | Parent episode, pause step, canonical snapshot hash, and child episode |
+| `HandoffBranch` | Restored observation and lineage |
+| `TrajectoryReplay` | Replay construction, pause selection, and supported restoration |
+
+`TrajectoryReplay(episode_id, trajectory, runtime=None)` stores an episode trajectory. `from_event_log(path, runtime=None, episode_id=None, progress=false)` loads one episode and restores portable image data from blobs.
+
+Supported methods are `pause(step, metadata=None)`, `pause_before_action(step, metadata=None)`, `materialize_pauses(specs)`, `validate_factor_applications(views, assignments)`, and `restore_handoff(view, environment, child_episode_id)`.
+
+We use the original saved snapshots for restoration and omit internal state from observer views. See [Replaying and handing off](../guides/replay-and-handoff.mdx) for a workflow and [Environment support and restoration](../explanation/capabilities-and-restoration.mdx) for limits.

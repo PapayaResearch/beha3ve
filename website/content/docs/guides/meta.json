@@ -1,0 +1,4 @@
+{
+  "title": "Quick guides",
+  "pages": ["install-and-configure", "configure-agents-and-observations", "write-interventions", "connect-environments", "define-outcomes", "design-and-scale-experiments", "inspect-traces", "replay-and-handoff", "multi-actor-experiments", "troubleshooting", "contribute"]
+}
